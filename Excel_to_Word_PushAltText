@@ -15,10 +15,10 @@
 # 1. .emf files are not supported yet.
 # 2. Still using Visual Basic to put images in cell?
 # 3. FIX Output report -
-#   a. Add Topic for easier search?
-#   b. Verify applying to multiple images (if image repeats in Word Document)
+#   a. Verify Topic pulled
+#   b. Verify applying Alt Text to multiple images (if image repeats in Word Document)
 #
-# Brenda Gardner — Final merged version (Picture ID pipeline)  w/Claude help
+# Brenda Gardner — Updated Nov 4 2025
 # ====
 
 import os
