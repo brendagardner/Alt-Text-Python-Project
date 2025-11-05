@@ -60,7 +60,6 @@ NOTES_COLUMN = column_index_from_string("V")
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"  # adjust if needed
 IMAGE_WIDTH = 150  # px
 
-
 # ====
 # HELPERS
 # ====
@@ -222,8 +221,17 @@ def solid_fill(argb: str) -> PatternFill:
 wb_src = openpyxl.load_workbook(EXCEL_PATH)
 ws_src = wb_src.active
 
+picture_id_header = safe_str(ws_src.cell(row=1, column=PICTURE_ID_COLUMN).value) or "Picture ID"
+file_name_header = safe_str(ws_src.cell(row=1, column=FILE_NAME_COLUMN).value) or "File Name/Source"
+section_header = safe_str(ws_src.cell(row=1, column=SECTION_COLUMN).value) or "Section/Module"
+page_header = safe_str(ws_src.cell(row=1, column=PAGE_NUMBER_COLUMN).value) or "Page #"
+excel_alt_header = safe_str(ws_src.cell(row=1, column=ALT_TEXT_COLUMN).value) or "Applied Alt Text"
+notes_header = safe_str(ws_src.cell(row=1, column=NOTES_COLUMN).value) or "Notes"
+
 alt_by_pid = {}  # picture_id -> record
 alt_by_filename = {}  # filename   -> record (fallback)
+excel_records_by_key = {}
+excel_primary_keys = set()
 
 records_loaded = 0
 for row in ws_src.iter_rows(min_row=2):
@@ -254,10 +262,20 @@ for row in ws_src.iter_rows(min_row=2):
     if file_name:
         alt_by_filename[file_name] = rec
 
+    primary_key = file_name or image_name or picture_id
+    if primary_key:
+        excel_primary_keys.add(primary_key)
+        rec.setdefault("primary_key", primary_key)
+
+    key_candidates = [file_name, image_name, picture_id]
+    for candidate in key_candidates:
+        if candidate:
+            excel_records_by_key[candidate] = rec
+
 print(f"✅ Loaded {records_loaded} Excel records keyed by Picture ID; fallback filename keys: {len(alt_by_filename)}")
 
 # Keep for report checks by filename presence
-alt_text_map = alt_by_filename
+alt_text_map = excel_records_by_key
 
 # ====
 # STEP 2 — OPEN DOCX, SNAPSHOT ORIGINAL ALT TEXTS, APPLY UPDATES
@@ -415,9 +433,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
             matched_filenames.add(filename)
 
     for fname in word_images:
-        for fname in word_images:
-            if fname not in matched_filenames and word_action_log.get(fname) is None:
-                word_action_log[fname] = "Not in Excel"
+        if fname not in matched_filenames and word_action_log.get(fname) is None:
+            word_action_log[fname] = "Image ID Mismatch"
 
     # Save updated Word file
     tree.write(str(document_xml_path), xml_declaration=True, encoding="utf-8", standalone="yes")
@@ -442,7 +459,7 @@ print(f"🖼 Found {len(media_files)} images in Word media folder for QA report"
 # ====
 # PREP — COMBINE IMAGE SOURCES FOR REPORT
 # ====
-excel_images = set(alt_text_map.keys())
+excel_images = set(excel_primary_keys)
 
 # ✅ Combine all known images:
 #    - those in the Word file
@@ -468,21 +485,21 @@ ws.title = "AltText QA Report"
 # --- Header setup ---
 headers = [
     "Thumbnail",
-    "Image Name",
-    "Picture ID",
-    "Original File",
-    "Section/Module",
-    "Page #",
+    "Image Filename",
+    picture_id_header,
+    file_name_header,
+    section_header,
+    page_header,
     "In Word?",
     "In Excel?",
-    "Word Alt Text",
-    "Applied/New Alt Text (Excel)",
+    "Word Alt Text (Original)",
+    excel_alt_header,
+    notes_header,
     "Word Action",
     "Status",
-    "Notes"
 ]
 
-col_widths = [50, 30, 25, 25, 12, 10, 10, 10, 70, 40, 20, 18, 40]
+col_widths = [50, 30, 20, 25, 25, 12, 12, 12, 70, 70, 40, 20, 18]
 
 for col, h in enumerate(headers, start=1):
     c = ws.cell(row=1, column=col, value=h)
@@ -501,13 +518,19 @@ with tempfile.TemporaryDirectory() as tmp_dir:
     row_num = 2
 
     for name in all_images:
-        # Try to find Excel record by: 1) filename, 2) Picture ID from Word
+        # Try to find Excel record via filename, picture ID, or image name
         rec = alt_text_map.get(name, {})
         if not rec and name in word_images:
             # Get Picture ID from Word for this filename
             for pid, fname in word_pid_to_filename.items():
                 if fname == name:
                     rec = alt_by_pid.get(pid, {})
+                    if rec:
+                        break
+        if not rec and name in word_images:
+            for excel_rec in alt_by_pid.values():
+                if excel_rec.get("image_name") == name:
+                    rec = excel_rec
                     break
 
         file_name = rec.get("file_name", "")
@@ -516,19 +539,32 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         notes = rec.get("notes", "")
         excel_alt_val = (rec.get("alt_text") or "").strip()
 
-        # --- Original Word alt text (Column I) ---
-        alt_texts = original_alt_text_map.get(name, [])
-        word_alt_text = " | ".join(alt_texts) if alt_texts else ""
+        display_name = rec.get("image_name") or file_name or name
 
-        # Always show Excel alt text in Column J
+        picture_id_value = ""
+        if name in word_images:
+            for pid, fname in word_pid_to_filename.items():
+                if fname == name:
+                    picture_id_value = pid
+                    break
+        if not picture_id_value:
+            picture_id_value = rec.get("picture_id", "")
+
+        # --- Original Word alt text ---
+        alt_texts = original_alt_text_map.get(name, [])
+        if isinstance(alt_texts, list):
+            word_alt_text = " | ".join([t for t in alt_texts if t])
+        else:
+            word_alt_text = safe_str(alt_texts)
+
         applied_alt_val = excel_alt_val
         if excel_alt_val and excel_alt_val != word_alt_text:
             new_alt_applied_count += 1
 
         # --- Membership flags ---
         in_word = "Yes" if name in word_images else ""
-        in_excel = "Yes" if name in excel_images else ""
-        if name in word_images and name in excel_images:
+        in_excel = "Yes" if rec else ""
+        if name in word_images and rec:
             in_word = in_excel = "Yes"
 
         # --- Insert thumbnail or fallback text ---
@@ -543,49 +579,49 @@ with tempfile.TemporaryDirectory() as tmp_dir:
             ws.cell(row=row_num, column=1, value="(Excel-only — no thumbnail)")
             adjust_row_height(ws, row_num, None, min_height=50)
 
-        # --- Picture ID from Excel record ---
-        picture_id = rec.get("picture_id", "")
-
         # --- Write base metadata (Columns B–F) ---
-        ws.cell(row=row_num, column=2, value=name)
-        ws.cell(row=row_num, column=3, value=picture_id)
-        ws.cell(row=row_num, column=4, value=file_name)
-        ws.cell(row=row_num, column=5, value=section)
-        ws.cell(row=row_num, column=6, value=page_num)
+        ws.cell(row=row_num, column=2, value=display_name)
+        ws.cell(row=row_num, column=3, value=picture_id_value).alignment = wrap_alignment
+        ws.cell(row=row_num, column=4, value=file_name).alignment = wrap_alignment
+        ws.cell(row=row_num, column=5, value=section).alignment = wrap_alignment
+        ws.cell(row=row_num, column=6, value=page_num).alignment = wrap_alignment
 
-        # --- In Word / In Excel flags ---
+        # --- Membership & Alt Text columns ---
         ws.cell(row=row_num, column=7, value=in_word)
         ws.cell(row=row_num, column=8, value=in_excel)
-
-        # --- Alt Text columns ---
-        ws.cell(row=row_num, column=9, value=word_alt_text).alignment = shrink_wrap_alignment
+        word_alt_cell = ws.cell(row=row_num, column=9, value=word_alt_text)
+        word_alt_cell.alignment = shrink_wrap_alignment
         cell_new = ws.cell(row=row_num, column=10, value=applied_alt_val)
         cell_new.alignment = shrink_wrap_alignment
+        ws.cell(row=row_num, column=11, value=notes).alignment = wrap_alignment
 
         # --- Word Action + Status determination ---
-        word_action = word_action_log.get(name, "No Change")
-        ws.cell(row=row_num, column=11, value=word_action)
+        word_action = word_action_log.get(name)
+        if not word_action:
+            if rec and name not in word_images:
+                word_action = "Excel Entry Only"
+            else:
+                word_action = "No Change"
+        ws.cell(row=row_num, column=12, value=word_action)
 
         if word_action in ("Alt Text Added", "Marked as Decorative"):
             status = "OK"
-        elif word_action in ("Not in Excel", "Modify this image", "No Change"):
+        elif word_action in ("Image ID Mismatch", "Modify this image", "No Change"):
             status = "Review"
-        elif name in excel_images and name not in word_images:
+        elif rec and name not in word_images:
             status = "Excel-only"
-        elif name in word_images and name not in excel_images:
+        elif name in word_images and not rec:
             status = "Word-Only"
         else:
             status = "Review"
 
-        s_cell = ws.cell(row=row_num, column=12, value=status)
+        s_cell = ws.cell(row=row_num, column=13, value=status)
         if status == "OK":
             s_cell.font = Font(bold=True, color=GREEN_FONT)
         elif status == "Review":
             s_cell.font = Font(bold=True, color=ORANGE_FONT)
         else:
             s_cell.font = Font(bold=True)
-
-        ws.cell(row=row_num, column=13, value=notes).alignment = wrap_alignment
         row_num += 1
 
     # ====
@@ -595,11 +631,13 @@ with tempfile.TemporaryDirectory() as tmp_dir:
     summary_ws["A1"] = "Alt Text Report Summary"
     summary_ws["A1"].font = Font(bold=True, size=14)
 
+    unique_excel_records = len(excel_primary_keys)
     summary_ws["A3"], summary_ws["B3"] = "Total Word Media Files", len(media_files)
-    summary_ws["A4"], summary_ws["B4"] = "Total Excel Alt Text Entries", len(excel_images)
-    summary_ws["A5"], summary_ws["B5"] = "Matched Word + Excel", len(media_files.intersection(excel_images))
-    summary_ws["A6"], summary_ws["B6"] = "Word-only Images", len(media_files - excel_images)
-    summary_ws["A7"], summary_ws["B7"] = "Excel-only Entries", len(excel_images - media_files)
+    summary_ws["A4"], summary_ws["B4"] = "Total Excel Alt Text Entries", unique_excel_records
+    summary_ws["A5"], summary_ws["B5"] = "Matched Word + Excel", len(matched_filenames)
+    summary_ws["A6"], summary_ws["B6"] = "Word-only Images", len(word_images - matched_filenames)
+    excel_only_count = max(unique_excel_records - len(matched_filenames), 0)
+    summary_ws["A7"], summary_ws["B7"] = "Excel-only Entries", excel_only_count
     summary_ws["A8"], summary_ws["B8"] = "New Alt Texts Applied", new_alt_applied_count
 
     summary_ws["B8"].font = Font(bold=True, color=GREEN_FONT)
@@ -609,7 +647,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
 
     status_counts = {}
     for r in range(2, ws.max_row + 1):
-        val = ws.cell(row=r, column=12).value
+        val = ws.cell(row=r, column=13).value
         if val:
             status_counts[val] = status_counts.get(val, 0) + 1
 
