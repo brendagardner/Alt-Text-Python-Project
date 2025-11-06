@@ -1,25 +1,12 @@
 # ====
 # UNIFIED: MATCH BY PICTURE ID, APPLY ALT TEXT, AND BUILD QA REPORT
-# ====
-# What this script does:
-# 1) Reads Excel (Picture ID, Alt Text, metadata)
-# 2) Opens DOCX, snapshots ORIGINAL alt text (pre-change)
-# 3) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
-# 4) Rebuilds a QA report with:
-#    - Column I  : Word Alt Text (ORIGINAL, pre-change)
-#    - Column J  : Applied/New Alt Text (Excel) — only if applied/changed
-#    - Word Action and simplified Status: OK / Review (green/orange font)
-#    - Excel-only rows: placeholder thumb + ImageName/PictureID from Excel
-
-# To FINISH:
-# 1. .emf files are not supported yet.
-# 3. FIX Output report -
-#   a. Add image topic (column E)
-#   b. Add yes to "in Excel?" column if excel alt text was found and applied.
-#   b. Verify applying Alt Text to multiple images (if Picture ID repeats in Word Document - apply alt text to all images with repeating PictureID)
-#  
-# Still using Visual Basic to put images in cell
-# Brenda Gardner — Updated Nov 5 2025
+# Updates:
+#  - Added Image Topic column (Excel column F -> report column E)
+#  - Mark both "In Word?" and "In Excel?" as Yes when Excel alt text was found AND applied to Word
+#  - Ensure alt text application is applied for every docPr (multiple images with same Picture ID)
+#  - Capture Picture ID(s) and docPr title(s) for Word-only images (for Section)
+#  - NEW: use python-docx to locate image paragraph indices and find the nearest preceding Heading 1 to populate Section
+# Brenda Gardner — Updated Nov 5 2025 (revised per requested changes)
 # ====
 
 import zipfile
@@ -29,6 +16,7 @@ import subprocess
 from io import BytesIO
 from pathlib import Path
 from typing import Union, Tuple
+from collections import defaultdict
 
 import openpyxl
 from openpyxl import Workbook
@@ -38,25 +26,28 @@ from openpyxl.utils import get_column_letter, column_index_from_string
 from lxml import etree
 from PIL import Image as PILImage
 
+from docx import Document  # NEW: for heading-based Section extraction
 
 # ====
 # CONFIG — EDIT THESE
 # ====
 DOCX_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Lecture Notes Chapters 1-5/Math 1010 Lecture Notes Module 2 copy.docx")
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Lecture Notes Chapters 1-5/Math 1010 Lecture Notes Module [...]"
+)
 EXCEL_PATH = Path(
     "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Test Files/Mod 2 Push Alt Text.xlsx")
 
 OUTPUT_DOCX  = DOCX_PATH.with_name(DOCX_PATH.stem + "_withAltText.docx")
 REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
 
-# Excel column mapping (letters). Change ALT_TEXT_COLUMN to "P" if your alt text is in P.
+# Excel column mapping (letters).
 PICTURE_ID_COLUMN = column_index_from_string("C")  # Excel Picture ID
 ALT_TEXT_COLUMN   = column_index_from_string("T")  # Excel Alt Text ("P" or "T" per your sheet)
 FILE_NAME_COLUMN  = column_index_from_string("J")
 SECTION_COLUMN    = column_index_from_string("K")
 PAGE_NUMBER_COLUMN= column_index_from_string("L")
-NOTES_COLUMN    = column_index_from_string("V")
+NOTES_COLUMN      = column_index_from_string("V")
+TOPIC_COLUMN      = column_index_from_string("F")  # NEW: Image Topic in Excel column F
 
 # Thumbnails
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"  # adjust if needed
@@ -150,9 +141,8 @@ def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, 
         ws.row_dimensions[row].height = new_height * 0.75
 
     except Exception as e:
-        ws.cell(row=row, column=1, value=f"(error: {e})")
+        ws.cell(row=row, column=1, value=f"(error: {target_filename}: {e})")
         print(f"⚠ Could not insert {target_filename}: {e}")
-
 
 def adjust_row_height(ws, row: int, img_height: int = None, min_height: int = 50):
     """Adjust row height based on image height or keep a consistent minimum."""
@@ -163,6 +153,74 @@ def adjust_row_height(ws, row: int, img_height: int = None, min_height: int = 50
 
 def solid_fill(argb: str) -> PatternFill:
     return PatternFill(patternType="solid", fgColor=argb)
+
+# --- Functions borrowed/adjusted from WORD_AI_OUTPUT_FILE.py to locate image paragraph indices
+def read_paragraph_texts(doc: Document):
+    return [p.text for p in doc.paragraphs]
+
+def extract_section_from_heading(paragraphs, p_idx: int) -> str:
+    """Walk backwards from paragraph index p_idx and return nearest Heading 1 text (or empty)."""
+    if p_idx is None or p_idx < 0 or p_idx >= len(paragraphs):
+        return ""
+    for i in range(p_idx, -1, -1):
+        para = paragraphs[i]
+        style_name = para.style.name if para.style else ""
+        if style_name == "Heading 1":
+            text = para.text.strip()
+            # try to extract a section-like prefix like "1.2" etc.
+            import re
+            m = re.match(r"^([A-Za-z]*\s*\d+(\.\d+)*)(\s|$)", text)
+            if m:
+                return m.group(1)
+            return text
+    return ""
+
+def locate_all_image_instances(doc: Document):
+    """
+    Return mapping: rid -> list of paragraph indices where that image instance occurs.
+    This inspects runs in paragraphs, table cells, and tables recursively.
+    """
+    rid_to_paras = {}
+    for i, p in enumerate(doc.paragraphs):
+        for run in p.runs:
+            blips = run._element.xpath(
+                ".//*[local-name()='blip' and namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/main']"
+            )
+            for blip in blips:
+                rid = blip.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
+                if rid:
+                    rid_to_paras.setdefault(rid, []).append(i)
+
+    def inspect_cell(cell, row_idx_hint):
+        for p in cell.paragraphs:
+            for run in p.runs:
+                blips = run._element.xpath(
+                    ".//*[local-name()='blip' and namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/main']"
+                )
+                for blip in blips:
+                    rid = blip.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
+                    if rid:
+                        rid_to_paras.setdefault(rid, []).append(row_idx_hint)
+        for t in cell.tables:
+            inspect_table(t, row_idx_hint)
+
+    def inspect_table(table, row_idx_hint):
+        for row in table.rows:
+            for cell in row.cells:
+                inspect_cell(cell, row_idx_hint)
+
+    for tbl in doc.tables:
+        parent_idx = -1
+        for idx, p in enumerate(doc.paragraphs):
+            # check if the table element is within this paragraph's parent children
+            if tbl._element in list(p._element.getparent().getchildren()):
+                parent_idx = idx
+                break
+        if parent_idx == -1:
+            parent_idx = len(doc.paragraphs) - 1
+        inspect_table(tbl, parent_idx)
+
+    return rid_to_paras
 
 # ====
 # STEP 1 — READ EXCEL (keyed by Picture ID)
@@ -182,6 +240,7 @@ for row in ws_src.iter_rows(min_row=2):
     section    = safe_str(row[SECTION_COLUMN    - 1].value)
     page_num   = safe_str(row[PAGE_NUMBER_COLUMN- 1].value)
     notes      = safe_str(row[NOTES_COLUMN    - 1].value)
+    topic      = safe_str(row[TOPIC_COLUMN    - 1].value)  # NEW: topic from Excel column F
 
     if not (picture_id or file_name or alt_text):
         continue
@@ -194,6 +253,7 @@ for row in ws_src.iter_rows(min_row=2):
         "section": section,
         "page_number": page_num,
         "notes": notes,
+        "topic": topic,
     }
 
     if picture_id:
@@ -208,6 +268,20 @@ print(f"✅ Loaded {records_loaded} Excel records keyed by Picture ID; fallback 
 alt_text_map = alt_by_filename
 
 # ====
+# Prepare python-docx context for heading lookup (NEW)
+# ====
+try:
+    doc_for_headings = Document(str(DOCX_PATH))
+    paragraph_objs = doc_for_headings.paragraphs
+    rid_para_map = locate_all_image_instances(doc_for_headings)
+    print(f"📄 Parsed document paragraphs: {len(paragraph_objs)}; found {len(rid_para_map)} image instances (rIds) via python-docx")
+except Exception as e:
+    print(f"⚠ Could not parse DOCX with python-docx for heading extraction: {e}")
+    doc_for_headings = None
+    paragraph_objs = []
+    rid_para_map = {}
+
+# ====
 # STEP 2 — OPEN DOCX, SNAPSHOT ORIGINAL ALT TEXTS, APPLY UPDATES
 # ====
 with tempfile.TemporaryDirectory() as tmpdir:
@@ -219,6 +293,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
     rels_path    = tmp_path / "word" / "_rels" / "document.xml.rels"
 
     ns = {
+        "w":  "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
         "a":  "http://schemas.openxmlformats.org/drawingml/2006/main",
         "wp": "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
         "r":  "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
@@ -243,9 +318,13 @@ with tempfile.TemporaryDirectory() as tmpdir:
     word_action_log    = {}
     original_alt_text_map = {}  # filename -> list of ORIGINAL descr (pre-change) - handles duplicates
     matched_filenames    = set()  # filenames that got a valid Excel match
+    applied_filenames    = set()  # filenames where an Excel alt text was applied (Alt Text Added / Marked as Decorative)
+
+    # NEW: filename -> list of picture_ids, and filename -> list of docPr titles to capture multiple occurrences
+    filename_to_pids = defaultdict(list)
+    filename_to_titles = defaultdict(list)
 
     # --- SNAPSHOT ORIGINAL ALT TEXTS (before any changes)
-    word_pid_to_filename = {}  # picture_id -> filename
     for docPr in root.findall(".//wp:docPr", ns):
         drawing = docPr.getparent()
         blip = drawing.find(".//a:blip", ns)
@@ -267,12 +346,30 @@ with tempfile.TemporaryDirectory() as tmpdir:
             original_alt_text_map[filename] = []
         original_alt_text_map[filename].append(original_descr)
 
+        # Capture picture_id(s) and titles per filename (preserve duplicates)
         picture_id_raw = docPr.get("id")
         picture_id = _norm_pid(picture_id_raw)
         if picture_id:
-            word_pid_to_filename[picture_id] = filename
+            filename_to_pids[filename].append(picture_id)
 
-    # --- APPLY UPDATES BY PICTURE ID
+        title = docPr.get("title", "")
+        if title:
+            filename_to_titles[filename].append(title)
+
+        # NEW: attempt to derive section from preceding Heading 1 using python-docx paragraph index if available
+        try:
+            if rid_para_map and rid in rid_para_map and doc_for_headings:
+                para_indices = rid_para_map.get(rid, [])
+                if para_indices:
+                    p_idx = para_indices[0]
+                    section_guess = extract_section_from_heading(paragraph_objs, p_idx)
+                    if section_guess:
+                        filename_to_titles[filename].append(section_guess)
+        except Exception:
+            # non-fatal
+            pass
+
+    # --- APPLY UPDATES BY PICTURE ID (iterate every docPr element so repeated PictureIDs are all updated)
     updated = 0
     for docPr in root.findall(".//wp:docPr", ns):
         drawing = docPr.getparent()
@@ -312,22 +409,15 @@ with tempfile.TemporaryDirectory() as tmpdir:
                 # Namespaces
                 A_NS = ns["a"]
                 A11Y_NS = "http://schemas.microsoft.com/office/drawing/2018/a11y"
-                # Ensure prefix registered (lxml handles URIs; prefix is cosmetic)
                 etree.register_namespace("a11y", A11Y_NS)
 
                 extLst = docPr_el.find(f".//{{{A_NS}}}extLst")
                 if extLst is None:
                     extLst = etree.Element(f"{{{A_NS}}}extLst")
-                    # docPr must contain extLst directly (sibling of cNvPr)
                     docPr_el.append(extLst)
 
-                # MSO usually wraps vendor extensions in <a:ext uri="...">
-                # A concrete, stable URI isn't publicly documented; we can use a
-                # deterministic GUID string to host the a11y child.
-                # Word accepts unknown URIs as vendor extensions.
                 ext = None
                 for candidate in extLst.findall(f".//{{{A_NS}}}ext"):
-                    # reuse an existing ext if it already contains an a11y:decorative
                     if candidate.find(f".//{{{A11Y_NS}}}decorative") is not None:
                         ext = candidate
                         break
@@ -336,17 +426,16 @@ with tempfile.TemporaryDirectory() as tmpdir:
                     ext.set("uri", "{0000-0000-0000-0000-0000}")  # placeholder URI
                     extLst.append(ext)
 
-                # Add/ensure a11y:decorative val="1"
                 decorative = ext.find(f".//{{{A11Y_NS}}}decorative")
                 if decorative is None:
                     decorative = etree.Element(f"{{{A11Y_NS}}}decorative")
                     ext.append(decorative)
                 decorative.set("val", "1")
 
-
             mark_decorative(docPr)
             word_action_log[filename] = "Marked as Decorative"
             matched_filenames.add(filename)
+            applied_filenames.add(filename)
             updated += 1
             continue
 
@@ -356,6 +445,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
             docPr.set("descr", alt_text)  # write new alt text
             word_action_log[filename] = "Alt Text Added"
             matched_filenames.add(filename)
+            applied_filenames.add(filename)
             updated += 1
         else:
             # matched PID but empty value: leave as no-change
@@ -392,8 +482,8 @@ print(f"🖼 Found {len(media_files)} images in Word media folder for QA report"
 # ====
 excel_images = set(alt_text_map.keys())
 
-# ✅ Combine all known images:
-#    - those in the Word file
+# Combine all known images:
+#    - those in the Word file (referenced pics)
 #    - those extracted from media/
 #    - those listed in Excel metadata
 all_images = sorted(word_images.union(media_files).union(excel_images))
@@ -415,27 +505,28 @@ ws.title = "AltText QA Report"
 
 # --- Header setup ---
 headers = [
-    "Thumbnail",
-    "Image Name",
-    "Picture ID",
-    "Original File",
-    "Section/Module",
-    "Page #",
-    "In Word?",
-    "In Excel?",
-    "Word Alt Text",
-    "Applied/New Alt Text (Excel)",
-    "Word Action",
-    "Status",
-    "Notes"
+    "Thumbnail",           # A
+    "Image Name",          # B
+    "Picture ID",          # C
+    "Original File",       # D
+    "Image Topic",         # E (NEW)
+    "Section/Module",      # F
+    "Page #",              # G
+    "In Word?",            # H
+    "In Excel?",           # I
+    "Word Alt Text",       # J
+    "Applied/New Alt Text (Excel)", # K
+    "Word Action",         # L
+    "Status",              # M
+    "Notes"                # N
 ]
 
-col_widths = [50, 30, 25, 25, 12, 10, 10, 10, 70, 40, 20, 18, 40]
+col_widths = [50, 30, 25, 25, 20, 12, 10, 10, 10, 70, 40, 20, 18, 40]
 
 for col, h in enumerate(headers, start=1):
     c = ws.cell(row=1, column=col, value=h)
     c.font = Font(bold=True)
-    ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = col_widths[col - 1]
+    ws.column_dimensions[get_column_letter(col)].width = col_widths[col - 1]
 
 # --- Set default alignments for later cells ---
 wrap_alignment = Alignment(wrap_text=True, vertical="top")
@@ -452,23 +543,28 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         # Try to find Excel record by: 1) filename, 2) Picture ID from Word
         rec = alt_text_map.get(name, {})
         if not rec and name in word_images:
-            # Get Picture ID from Word for this filename
-            for pid, fname in word_pid_to_filename.items():
-                if fname == name:
-                    rec = alt_by_pid.get(pid, {})
-                    break
+            # Get Picture ID(s) from Word for this filename
+            pids = filename_to_pids.get(name, [])
+            if pids:
+                # Prefer first matching Excel record by PID
+                for pid in pids:
+                    maybe = alt_by_pid.get(pid)
+                    if maybe:
+                        rec = maybe
+                        break
 
         file_name    = rec.get("file_name", "")
-        section    = rec.get("section", "")
-        page_num    = rec.get("page_number", "")
-        notes    = rec.get("notes", "")
+        section      = rec.get("section", "")
+        page_num     = rec.get("page_number", "")
+        notes        = rec.get("notes", "")
         excel_alt_val = (rec.get("alt_text") or "").strip()
+        topic_val     = (rec.get("topic") or "").strip()  # NEW: topic from Excel
 
-        # --- Original Word alt text (Column I) - handles duplicates ---
+        # --- Original Word alt text (Column J) - handles duplicates ---
         alt_texts = original_alt_text_map.get(name, [])
         word_alt_text = " | ".join(alt_texts) if alt_texts else ""
 
-        # Always show Excel alt text in Column J
+        # Always show Excel alt text in Column K
         applied_alt_val = excel_alt_val
         if excel_alt_val and excel_alt_val != word_alt_text:
             new_alt_applied_count += 1
@@ -476,8 +572,10 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         # --- Membership flags ---
         in_word  = "Yes" if name in word_images else ""
         in_excel = "Yes" if name in excel_images else ""
-        if name in word_images and name in excel_images:
-            in_word = in_excel = "Yes"
+        # If this image had an Excel alt applied to it in Word, mark both Yes
+        if name in applied_filenames:
+            in_word = "Yes"
+            in_excel = "Yes"
 
         # --- Insert thumbnail or fallback text ---
         if name in media_files:
@@ -491,30 +589,44 @@ with tempfile.TemporaryDirectory() as tmp_dir:
             ws.cell(row=row_num, column=1, value="(Excel-only — no thumbnail)")
             adjust_row_height(ws, row_num, None, min_height=50)
 
-        # --- Picture ID from Excel record ---
+        # --- Picture ID(s) for this image (Column C) ---
         picture_id = rec.get("picture_id", "")
+        if not picture_id:
+            pids_for_name = filename_to_pids.get(name, [])
+            if pids_for_name:
+                picture_id = ", ".join(pids_for_name)
+
+        # If still empty, keep as ""
+        picture_id = picture_id or ""
+
+        # --- If no section from Excel, try docPr title(s) or heading-based section captured earlier ---
+        if not section:
+            titles = filename_to_titles.get(name, [])
+            if titles:
+                section = " | ".join(titles)
 
         # --- Write base metadata (Columns B–F) ---
-        ws.cell(row=row_num, column=2, value=name)
-        ws.cell(row=row_num, column=3, value=picture_id)
-        ws.cell(row=row_num, column=4, value=file_name)
-        ws.cell(row=row_num, column=5, value=section)
-        ws.cell(row=row_num, column=6, value=page_num)
+        ws.cell(row=row_num, column=2, value=name)           # Image Name (B)
+        ws.cell(row=row_num, column=3, value=picture_id)     # Picture ID (C)
+        ws.cell(row=row_num, column=4, value=file_name)      # Original File (D)
+        ws.cell(row=row_num, column=5, value=topic_val)      # Image Topic (E) NEW
+        ws.cell(row=row_num, column=6, value=section)        # Section/Module (F)
+        ws.cell(row=row_num, column=7, value=page_num)       # Page # (G)
 
-        # --- In Word / In Excel flags ---
-        ws.cell(row=row_num, column=7, value=in_word)
-        ws.cell(row=row_num, column=8, value=in_excel)
+        # --- In Word / In Excel flags (H,I) ---
+        ws.cell(row=row_num, column=8, value=in_word)
+        ws.cell(row=row_num, column=9, value=in_excel)
 
-        # --- Alt Text columns ---
-        ws.cell(row=row_num, column=9, value=word_alt_text).alignment = shrink_wrap_alignment
-        cell_new = ws.cell(row=row_num, column=10, value=applied_alt_val)
+        # --- Alt Text columns (J,K) ---
+        ws.cell(row=row_num, column=10, value=word_alt_text).alignment = shrink_wrap_alignment
+        cell_new = ws.cell(row=row_num, column=11, value=applied_alt_val)
         cell_new.alignment = shrink_wrap_alignment
 
-        # --- Word Action + Status determination ---
+        # --- Word Action + Status determination (L,M) ---
         word_action = word_action_log.get(name, "No Change")
-        ws.cell(row=row_num, column=11, value=word_action)
+        ws.cell(row=row_num, column=12, value=word_action)
 
-        # ✅ FIX: Changed "Image ID Mismatch" to "Not in Excel" in status logic
+        # Determine status
         if word_action in ("Alt Text Added", "Marked as Decorative"):
             status = "OK"
         elif word_action in ("Not in Excel", "Modify this image", "No Change"):
@@ -526,7 +638,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         else:
             status = "Review"
 
-        s_cell = ws.cell(row=row_num, column=12, value=status)
+        s_cell = ws.cell(row=row_num, column=13, value=status)
         if status == "OK":
             s_cell.font = Font(bold=True, color=GREEN_FONT)
         elif status == "Review":
@@ -534,7 +646,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         else:
             s_cell.font = Font(bold=True)
 
-        ws.cell(row=row_num, column=13, value=notes).alignment = wrap_alignment
+        ws.cell(row=row_num, column=14, value=notes).alignment = wrap_alignment
         row_num += 1
 
     # ====
@@ -558,7 +670,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
 
     status_counts = {}
     for r in range(2, ws.max_row + 1):
-        val = ws.cell(row=r, column=12).value
+        val = ws.cell(row=r, column=13).value
         if val:
             status_counts[val] = status_counts.get(val, 0) + 1
 
