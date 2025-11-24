@@ -1,6 +1,8 @@
 # ====
 # UNIFIED: MATCH BY PICTURE ID, APPLY ALT TEXT, AND BUILD QA REPORT
-# to fix:  Output file not capturing original file, page number, or applying an image topic.  But doing good job capturing .wmf files not found in Word_AI_Output_file
+# to fix:  
+#  - Output file not capturing original file, page number, or applying an image topic.  But doing good job capturing .wmf files not found in Word_AI_Output_file
+#  - Not applying alt text to duplicate images
 # Updates:
 #  - Added Image Topic column (Excel column F -> report column E)
 #  - Mark both "In Word?" and "In Excel?" as Yes when Excel alt text was found AND applied to Word
