@@ -1,11 +1,12 @@
 # ====
 # UNIFIED: MATCH BY PICTURE ID, APPLY ALT TEXT, AND BUILD QA REPORT
+# to fix:  Output file not capturing original file, page number, or applying an image topic.  But doing good job capturing .wmf files not found in Word_AI_Output_file
 # Updates:
 #  - Added Image Topic column (Excel column F -> report column E)
 #  - Mark both "In Word?" and "In Excel?" as Yes when Excel alt text was found AND applied to Word
 #  - Ensure alt text application is applied for every docPr (multiple images with same Picture ID)
 #  - Capture Picture ID(s) and docPr title(s) for Word-only images (for Section)
-#  - NEW: use python-docx to locate image paragraph indices and find the nearest preceding Heading 1 to populate Section
+#  -use python-docx to locate image paragraph indices and find the nearest preceding Heading 1 to populate Section
 # Brenda Gardner — Updated Nov 5 2025 (revised per requested changes)
 # ====
 
