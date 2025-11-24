@@ -2,7 +2,7 @@
 # Improvement of Word_AI_Output_File
 
 # TO FIX:
-# 1. .EMF FILES
+# 1. .EMF, .wmf FILES
 
 # NOTES BEFORE RUNNING:
 # 1. SET API KEY CONFIGURATIONS - BuildAPIVisionKey
