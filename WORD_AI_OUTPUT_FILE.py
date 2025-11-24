@@ -36,7 +36,7 @@ from lxml import etree
 # CONFIG — EDIT THESE
 # =========================
 FOLDER_PATH = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Lecture Notes Chapters 1-5")
-OUTPUT_EXCEL_PREFIX = "1010_Mod2-5_Run_Through_AI"
+OUTPUT_EXCEL_PREFIX = "1010_Mod6-7_Create_AltText"
 DEFAULT_GRADE_BAND = "10-12"
 COURSE_TOPIC = "Intermediate Algebra"
 
