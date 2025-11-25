@@ -1,14 +1,18 @@
 # ====
 # UNIFIED: MATCH BY PICTURE ID, APPLY ALT TEXT, AND BUILD QA REPORT
-# to fix:  
+# What this script does:
+# 1) Reads Excel (Picture ID, Alt Text, metadata)
+# 2) Opens DOCX, snapshots ORIGINAL alt text (pre-change)
+# 3) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
+# 4) Rebuilds a QA report with:
+#    - Column I  : Word Alt Text (ORIGINAL, pre-change)
+#    - Column J  : Applied/New Alt Text (Excel) — only if applied/changed
+#    - Word Action and simplified Status: OK / Review (green/orange font)
+#    - Excel-only rows: placeholder thumb + ImageName/PictureID from Excel
+# to Fix:  
 #  - Output file not capturing original file, page number, or applying an image topic.  But doing good job capturing .wmf files not found in Word_AI_Output_file
 #  - Not applying alt text to duplicate images
-# Updates:
-#  - Added Image Topic column (Excel column F -> report column E)
-#  - Mark both "In Word?" and "In Excel?" as Yes when Excel alt text was found AND applied to Word
-#  - Ensure alt text application is applied for every docPr (multiple images with same Picture ID)
-#  - Capture Picture ID(s) and docPr title(s) for Word-only images (for Section)
-#  -use python-docx to locate image paragraph indices and find the nearest preceding Heading 1 to populate Section
+# - Still need to use Visual Basic to put images in cell
 # Brenda Gardner — Updated Nov 5 2025 (revised per requested changes)
 # ====
 
