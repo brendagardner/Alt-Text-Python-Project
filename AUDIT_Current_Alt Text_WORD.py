@@ -1,11 +1,11 @@
 
 #Created Nov 24 to capture/audit the current Alt Text from DOCX files in preferred Excel format
-#updated at 6:10PM to revise columns so they match output excel file from Alt Text to Word Report
+#columns match output excel file from Alt Text to Word Report
 
 """
 Single DOCX → Excel (A–V headers). No API calls.
 Fills in:
-A: Thumbnail, B: Image Filename, C: Picture ID, D: File Name/Source
+A: Thumbnail, B: Image Filename, C: Picture ID (what is eventually matched), D: File Name/Source
 E: Image Topic (blank)
 F: Section/Module
 G = Page Number
