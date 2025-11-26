@@ -30,6 +30,7 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
+from helpers import alttext_utils as utils
 from lxml import etree
 
 # =========================
