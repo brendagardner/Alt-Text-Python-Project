@@ -8,8 +8,8 @@
 # 1. SET API KEY CONFIGURATIONS - BuildAPIVisionKey
 # 2. REVIEW FOLDER, OUTPUT FILE NAME AND VISION MODEL
 
-# Brenda Gardner — Nov 4 2025
-# Updated - Added LocationIndex in Column D.  Captured duplicate images.
+# Brenda Gardner — Nov 4 2025 Updated - Added LocationIndex in Column D.  
+# Nov 26 - Updated Style guide 
 
 
 import os
@@ -53,10 +53,30 @@ API_TIMEOUT_SEC = 180
 if not ABACUS_API_KEY:
     raise EnvironmentError("❌ Missing ABACUS_API_KEY environment variable.")
 
-STYLE_GUIDE_RULES = """
-You are an accessibility expert for STEM education. For each image, in addition to your JSON alt text, also suggest a topic for the image that best matches its mathematical or visual content and context (e.g., 'number line', 'parabola', 'coordinate system', 'table', etc.). Use your best judgment; the following are just examples, and you may add more based on your reasoning:
-number line, points, definition, coordinate system, slope, linear graph, linear systems, linear inequalities, exponential, growth model, decay model, logarithmic, absolute value, parabola, polynomial, rational function, domain and range, general function, histogram, scatterplot, miscellaneous (non-math)
-Return valid JSON with keys: short, standard, long, notes, topic
+STYLE_GUIDE_RULES = STYLE_GUIDE_RULES = """
+You are an accessibility expert for STEM education. Generate alt text according to these rules:
+- Be accurate and concise. Do not reveal answers not explicitly shown.
+- Use math screen-reader conventions:
+  - "negative three", not "-3" unless the negative is in parentheses.
+  - Fractions as "three-fourths" or "three over four", not "3/4".
+  - "x-axis", "y-axis"; include units if shown.
+  - "f of x"; "x squared"; "square root of".
+  - Coordinates: "(-1,5)"
+- Describe essential visual elements only: axes, labels, shapes, relationships, trends.
+- Provide three variants per image:
+  1) Short (<= 120 characters)
+  2) Standard (<= 250 characters)
+  3) Long (no limit; only if image is complex)
+- Adjust language by grade level:
+  - 4–6: simple words; avoid jargon.
+  - 7–9: basic terms like slope, intercept, proportional.
+  - 10–14: precise terms like parabola, asymptote, vertex.
+- If a variant might reveal an answer, include a note: [risk: might reveal answer].
+- Do not include colors unless colors are mentioned in context.  
+- Do not use "an image of" and similar.
+
+Return ONLY a valid JSON object with these exact keys: short, standard, long, notes
+Do not include any markdown formatting or code blocks, just the raw JSON.
 """
 
 def clean_text(s: str, max_len: int) -> str:
