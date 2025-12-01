@@ -1,5 +1,4 @@
 # helpers/alttext_utils.py
-# Dec 1 - not reading images in tables
 
 from __future__ import annotations
 
