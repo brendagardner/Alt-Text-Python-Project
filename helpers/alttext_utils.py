@@ -1,4 +1,5 @@
 # helpers/alttext_utils.py
+# Dec 1 - not reading images in tables
 
 from __future__ import annotations
 
@@ -15,6 +16,11 @@ from typing import Dict, List, Tuple, Union, Optional
 from docx import Document
 from lxml import etree
 from PIL import Image as PILImage
+
+from openpyxl.drawing.image import Image as ExcelImage
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
+
 
 # If these are defined in another file later, you can delete these placeholders
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
@@ -326,3 +332,76 @@ def resize_png(png_bytes: bytes) -> Tuple[bytes, Tuple[int, int]]:
 
 def build_prompt(grade_band: str, course_topic: str, context: str) -> str:
     return f"{STYLE_GUIDE_RULES}\nContext snippet: {context}\nReturn ONLY JSON."
+
+
+
+def _pixels_to_column_width(pixels: int) -> float:
+    """
+    Approximate conversion from pixels → Excel column width units.
+    This is not exact, but works well enough for thumbnails.
+    """
+    if pixels <= 0:
+        return 8.43  # default Excel width
+    return (pixels - 5) / 7.0
+
+
+def _pixels_to_row_height(pixels: int) -> float:
+    """
+    Approximate conversion from pixels → Excel row height (points).
+    1 point ≈ 1.33 pixels → 1 px ≈ 0.75 pt
+    """
+    if pixels <= 0:
+        return 15.0  # default Excel height
+    return pixels * 0.75
+
+
+def insert_png_bytes_in_cell(
+    ws: Worksheet,
+    row: int,
+    col: int,
+    *,
+    png_bytes: bytes,
+    width_px: int,
+    height_px: int,
+    adjust_row_col: bool = True,
+    max_col_width_px: int = 100,
+) -> Optional[ExcelImage]:
+    """
+    Insert a PNG (already resized) into a specific cell so that it moves with
+    the row when you filter/sort.
+
+    Column width will be increased as needed, but never beyond max_col_width_px.
+    """
+    if not png_bytes:
+        return None
+
+    buf = BytesIO(png_bytes)
+    img = ExcelImage(buf)
+
+    # Use the actual image size for the drawing itself
+    img.width = width_px
+    img.height = height_px
+
+    col_letter = get_column_letter(col)
+    cell_addr = f"{col_letter}{row}"
+
+    # Anchor to the cell so it moves with filters/sorts
+    img.anchor = cell_addr
+    ws.add_image(img)
+
+    if adjust_row_col:
+        # ---- Column width (cap at max_col_width_px) ----
+        desired_col_px = min(width_px, max_col_width_px)
+        new_col_width = _pixels_to_column_width(desired_col_px)
+
+        col_dim = ws.column_dimensions[col_letter]
+        if not col_dim.width or col_dim.width < new_col_width:
+            col_dim.width = new_col_width
+
+        # ---- Row height (no cap; let it grow with the thumbnail) ----
+        row_dim = ws.row_dimensions[row]
+        new_row_height = _pixels_to_row_height(height_px)
+        if not row_dim.height or row_dim.height < new_row_height:
+            row_dim.height = new_row_height
+
+    return img
