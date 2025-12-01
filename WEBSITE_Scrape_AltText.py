@@ -4,7 +4,7 @@
 
 # Step 1. Capture URLs and Subjects.
 # a. Go to Website TOC and copy paste URLS.
-# use in conjunction with https://slccbruins-my.sharepoint.com/:x:/g/personal/bgardn61_slcc_edu/EfoCHNHNLE1GiEPFQ4qB41gB8N5l8VGd4Mcy4T3HWdFdsw?e=7n3NUp
+# use in conjunction with https://slccbruins-my.sharepoint.com/:x:/g/personal/bgardn61_slcc_edu/IQD6AhzRzSxNRohDxUOKgeNYAQrWIctBAHw6ag8_bIYE-U8?e=sQFPWW
 
 # End Step. After processing: Use macro to put the images in cell to allow filtering
 
