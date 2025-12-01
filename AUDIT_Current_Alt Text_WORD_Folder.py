@@ -26,6 +26,7 @@ from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 
+
 from helpers import alttext_utils as altutils
 
 # =========================
@@ -61,6 +62,8 @@ def process_single_docx(docx_path: Path, output_folder: Path):
 
     wb = Workbook()
     ws = wb.active
+    DEFAULT_THUMB_WIDTH_PX = 100
+    ws.column_dimensions["A"].width = altutils._pixels_to_column_width(DEFAULT_THUMB_WIDTH_PX)
     ws.title = "Alt Text Audit"
 
     headers = [
@@ -112,15 +115,20 @@ def process_single_docx(docx_path: Path, output_folder: Path):
 
         for p_idx in para_indices:
             # Column A: Thumbnail
-            if thumb_bytes:
-                img_stream = BytesIO(thumb_bytes)
-                excel_img = ExcelImage(img_stream)
-                openpyxl_image_refs.append((img_stream, excel_img))
-                ws.add_image(excel_img, f"A{row}")
-                if thumb_size[1] > 0:
-                    ws.row_dimensions[row].height = int(
-                        thumb_size[1] * altutils.ROW_HEIGHT_SCALE
-                    )
+            if thumb_bytes and thumb_size and thumb_size[0] > 0 and thumb_size[1] > 0:
+                excel_img = altutils.insert_png_bytes_in_cell(
+                    ws,
+                    row=row,
+                    col=1,  # Column A
+                    png_bytes=thumb_bytes,
+                    width_px=thumb_size[0],
+                    height_px=thumb_size[1],
+                    adjust_row_col=True,
+                    max_col_width_px=100,
+                )
+                if excel_img is not None:
+                    # Keep a reference so images don't disappear on save
+                    openpyxl_image_refs.append(excel_img)
             else:
                 ws.cell(row=row, column=1, value="[No Thumbnail]")
 
