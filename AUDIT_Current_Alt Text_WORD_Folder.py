@@ -34,12 +34,12 @@ from helpers import alttext_utils as altutils
 # =========================
 # 👉 Add a FOLDER to search for DOCX files
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/Module 1 Sections/Section 1.1  OER College Algebra Spr2021_Images/"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing"
 )
 
 # Where Excel audit files will be saved
 OUTPUT_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing"
 )
 
 # Processes specific to this script.  Others stored in alttext_utils.py
@@ -177,8 +177,6 @@ def process_single_docx(docx_path: Path, output_folder: Path):
     output_xlsx = output_folder / f"{docx_path.stem}_Audit_{timestamp}.xlsx"
     wb.save(output_xlsx)
     print(f"✅ Excel saved to: {output_xlsx}")
-
-
 
 
 def process_path(input_path: Path, output_folder: Path):
