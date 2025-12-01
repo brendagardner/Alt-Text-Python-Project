@@ -20,6 +20,7 @@ from PIL import Image as PILImage
 from openpyxl.drawing.image import Image as ExcelImage
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.styles import Alignment
 
 
 # If these are defined in another file later, you can delete these placeholders
@@ -354,6 +355,44 @@ def resize_png(png_bytes: bytes) -> Tuple[bytes, Tuple[int, int]]:
     out.seek(0)
     return out.getvalue(), (new_w, new_h)
 
+def create_thumbnail_from_bytes(
+    img_bytes: bytes,
+    max_width_px: int = 600,
+    allow_upscale: bool = False,
+) -> Tuple[bytes, int, int, int, int]:
+    """
+    Given raw image bytes (any format Pillow can open), return:
+      - thumbnail PNG bytes
+      - thumbnail width (px)
+      - thumbnail height (px)
+      - original width (px)
+      - original height (px)
+
+    If allow_upscale=False, we never enlarge images beyond their original width.
+    """
+    if not img_bytes:
+        return b"", 0, 0, 0, 0
+
+    pil = PILImage.open(BytesIO(img_bytes))
+    orig_w, orig_h = pil.size
+
+    if orig_w <= 0 or orig_h <= 0:
+        return b"", 0, 0, orig_w, orig_h
+
+    # Decide whether to resize
+    if (not allow_upscale) and orig_w <= max_width_px:
+        thumb = pil
+        thumb_w, thumb_h = orig_w, orig_h
+    else:
+        aspect = orig_h / orig_w if orig_w else 1
+        thumb_w = max_width_px
+        thumb_h = int(thumb_w * aspect) if aspect > 0 else max_width_px
+        thumb = pil.resize((thumb_w, thumb_h), PILImage.Resampling.LANCZOS)
+
+    out = BytesIO()
+    thumb.save(out, format="PNG", dpi=(300, 300))
+    out.seek(0)
+    return out.getvalue(), thumb_w, thumb_h, orig_w, orig_h
 
 def build_prompt(grade_band: str, course_topic: str, context: str) -> str:
     return f"{STYLE_GUIDE_RULES}\nContext snippet: {context}\nReturn ONLY JSON."
@@ -430,3 +469,40 @@ def insert_png_bytes_in_cell(
             row_dim.height = new_row_height
 
     return img
+
+def wrap_and_autofit_columns(
+    ws: Worksheet,
+    text_columns: List[str],
+    max_col_width_px: int = 240,
+    vertical: str = "top",
+) -> None:
+    """
+    Wrap text in the given columns and approximate autofit,
+    capping max width at max_col_width_px (in pixels).
+    """
+    # Wrap text
+    for col_letter in text_columns:
+        for cell in ws[col_letter]:
+            cell.alignment = Alignment(wrap_text=True, vertical=vertical)
+
+    # Autofit with max width cap
+    max_excel_width = _pixels_to_column_width(max_col_width_px)
+
+    for col_cells in ws.columns:
+        col_letter = get_column_letter(col_cells[0].column)
+        if col_letter not in text_columns:
+            continue
+
+        max_len = 0
+        for cell in col_cells:
+            value = cell.value
+            if value is not None:
+                length = len(str(value))
+                if length > max_len:
+                    max_len = length
+
+        if max_len == 0:
+            continue
+
+        desired_width = min(max_len + 2, max_excel_width)
+        ws.column_dimensions[col_letter].width = desired_width
