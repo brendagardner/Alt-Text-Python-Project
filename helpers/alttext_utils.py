@@ -205,50 +205,75 @@ def parse_rels(docx_path: Path) -> Dict[str, str]:
 
 
 def locate_all_image_instances(doc: Document) -> Dict[str, List[int]]:
+    """
+    Map relationship id (rId) -> list of paragraph index hints, including:
+
+    • Images in normal paragraphs
+    • Images inside tables (in any cell / nested table), even if they are
+      not directly attached to a Run.
+
+    The integer index is still based on doc.paragraphs, as in your original.
+    """
     rid_to_paras: Dict[str, List[int]] = {}
 
-    for i, p in enumerate(doc.paragraphs):
-        for run in p.runs:
-            blips = run._element.xpath(
-                ".//*[local-name()='blip' and "
-                "namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/main']"
+    def _add_rids_from_element(elem, idx_hint: int) -> None:
+        """Find all rIds for images under an arbitrary XML element."""
+        # DrawingML images (a:blip)
+        blips = elem.xpath(
+            ".//*[local-name()='blip' and "
+            "namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/main']"
+        )
+        for blip in blips:
+            rid = blip.get(
+                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
             )
-            for blip in blips:
-                rid = blip.get(
-                    "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
-                )
-                if rid:
-                    rid_to_paras.setdefault(rid, []).append(i)
+            if rid:
+                rid_to_paras.setdefault(rid, []).append(idx_hint)
 
-    def inspect_cell(cell, row_idx_hint):
-        for p in cell.paragraphs:
-            for run in p.runs:
-                blips = run._element.xpath(
-                    ".//*[local-name()='blip' and "
-                    "namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/main']"
-                )
-                for blip in blips:
-                    rid = blip.get(
-                        "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
-                    )
-                    if rid:
-                        rid_to_paras.setdefault(rid, []).append(row_idx_hint)
-        for t in cell.tables:
-            inspect_table(t, row_idx_hint)
+        # Legacy VML images (v:imagedata) — just in case
+        imagedatas = elem.xpath(
+            ".//*[local-name()='imagedata' and "
+            "namespace-uri()='urn:schemas-microsoft-com:vml']"
+        )
+        for img in imagedatas:
+            rid = img.get(
+                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+            )
+            if rid:
+                rid_to_paras.setdefault(rid, []).append(idx_hint)
 
-    def inspect_table(table, row_idx_hint):
-        for row in table.rows:
-            for cell in row.cells:
-                inspect_cell(cell, row_idx_hint)
+    # --- 1. All "flat" paragraphs in the document ---
+    for i, p in enumerate(doc.paragraphs):
+        # Instead of iterating runs, search the entire paragraph XML subtree.
+        _add_rids_from_element(p._element, i)
+
+    # --- 2. All tables in the body, mapped back to a nearby paragraph index ---
+    def inspect_table(table, row_idx_hint: int) -> None:
+        # Scan the WHOLE table subtree (cells, nested tables, etc.)
+        tbl_elm = table._element
+        _add_rids_from_element(tbl_elm, row_idx_hint)
 
     for tbl in doc.tables:
+        tbl_elm = tbl._element
         parent_idx = -1
+
+        # Find the closest preceding paragraph that shares the same parent
         for idx, p in enumerate(doc.paragraphs):
-            if tbl in p._element.getparent().getchildren():
-                parent_idx = idx
+            parent = p._element.getparent()
+            if parent is None:
+                continue
+
+            for child in parent.iterchildren():
+                if child is tbl_elm:
+                    parent_idx = idx
+                    break
+            if parent_idx != -1:
                 break
+
+        # Fallback: treat as "last paragraph" if we can't find a good anchor
         if parent_idx == -1:
-            parent_idx = len(doc.paragraphs) - 1
+            parent_idx = len(doc.paragraphs) - 1 if doc.paragraphs else 0
+
         inspect_table(tbl, parent_idx)
 
     return rid_to_paras
