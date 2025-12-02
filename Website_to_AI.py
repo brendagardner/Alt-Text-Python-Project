@@ -1,12 +1,16 @@
 # This script scrapes images + alt text from URLs and then calls the Abacus
 # vision API to generate candidate alt text variants.
-# Created by Brenda Gardner, December 2025.
+# Updated by Brenda Gardner, December 1 2025.
+# To improve - vision model using context - review last lines of STYLE_GUIDE_RULES in alttext_utils.py
 
 # Step 1. Capture URLs and Subjects.
 # a. Go to Website TOC and copy paste URLS.
 # use in conjunction with https://slccbruins-my.sharepoint.com/:x:/g/personal/bgardn61_slcc_edu/IQD6AhzRzSxNRohDxUOKgeNYAQrWIctBAHw6ag8_bIYE-U8?e=sQFPWW
 
-# Step 2. Confiture Abacus API key in Configure Environment.  (BuildAPIVisionKey)
+# Step 2. Configure Environment for Abacus API key.  (BuildAPIVisionKey)
+#      Note:  LLama4-Maverick is only Input: $0.14/M, Output: $0.59/M, 1 CR ~ 7 images.  $10/month = 20,000 CR ~ 150,000 images (Graph Theory images not accurate)
+#      If Llama doesn't work well, choose "gpt-4o-2024-11-20".  Input: $2.50/M, Output: $10.00/M.  3 CR ~ 1 images (Graph Theory images still not accurate)
+
 # Step 3. Run this script.
 # Step 4. VBA script to put images in cell and filter, as desired.
 
@@ -54,9 +58,6 @@ from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
 from helpers import alttext_utils as utils
-
-# Suppress LibreSSL / NotOpenSSL warnings on macOS
-warnings.simplefilter("ignore", NotOpenSSLWarning)
 
 # =========================
 # CONFIG — EDIT THESE
