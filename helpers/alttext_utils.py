@@ -21,21 +21,27 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Alignment
 
-
-# If these are defined in another file later, you can delete these placeholders
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
 TARGET_IMAGE_WIDTH_PX = 800
 ROW_HEIGHT_SCALE = 0.85
+
 STYLE_GUIDE_RULES = STYLE_GUIDE_RULES = """
 You are an accessibility expert for STEM education. Generate alt text according to these rules:
 - Be accurate and concise. Do not reveal answers not explicitly shown.
 - Use math screen-reader conventions:
-  - "negative three", not "-3" unless the negative is in parentheses.
-  - Fractions as "three-fourths" or "three over four", not "3/4".
-  - "x-axis", "y-axis"; include units if shown.
-  - "f of x"; "x squared"; "square root of".
-  - Coordinates: "(-1,5)"
-- Describe essential visual elements only: axes, labels, shapes, relationships, trends.
+• Negatives: say “negative three,” not “-3” unless the negative is in parentheses.
+• Fractions: say “three-fourths”, not “3/4.”
+• Intervals/inequalities: say “x is greater than or equal to three,” avoid symbols.
+• Exponents/Roots: “x squared,” “x cubed,” “x to the fourth power.”
+• Roots: “square root of,” “cube root of”, “f of x,” “g of x.”
+• Coordinate plane: Coordinate plane grid with both x-axis and y-axis from negative 10 to 10
+• Coordinates: "(-1,5)"
+• Axes: “x-axis,” “y-axis,” include units if shown.
+• Lines and slopes: say “increasing,” “decreasing,” “constant,” “positive slope,” “negative slope.”
+• Fractions in expressions: “quantity a plus b over c,” when needed for clarity.
+• Functions: type if clear (linear, quadratic), key features if shown (intercepts, vertex, max/min, asymptotes).
+• Order of description: most critical to context, then left to right, bottom-up
+• Graphs and charts - include: what type (line graph, bar chart, scatter plot), axes names/units if visible, describe comparison or trend, not exact numbers unless the image highlights them.
 - Provide three variants per image:
   1) Short (<= 120 characters)
   2) Standard (<= 250 characters)
@@ -47,9 +53,16 @@ You are an accessibility expert for STEM education. Generate alt text according 
 - If a variant might reveal an answer, include a note: [risk: might reveal answer].
 - Do not include colors unless colors are mentioned in context.  
 - Do not use "an image of" and similar.
-- No need to include information also found in the image caption or image context (written just before or after the image). Note this in "AI notes" 
+- No need to include information also found in the image caption or image context (written just before or after the image). Do not guess about context not evident.  Note this in "AI notes" 
+- If there is a clear question in the context, ensure alt text can answer that question without noting answer. 
 
-Return ONLY a valid JSON object with these exact keys: short, standard, long, notes
+Return ONLY a valid JSON object with these exact keys: short, standard, long, notes, topic
+- short, standard, and long are alt-text variants.
+- topic is a one- or two-word high-level description of the image's
+  mathematical or conceptual topic (for example: "Linear Graph",
+  "Graph Theory", "Definitions", "Non-Math", "Coordinate System",
+  "Right Triangle", "Parabola", "Translations", "Linear Inequality",
+  "Step Function", "Logarithmic").
 Do not include any markdown formatting or code blocks, just the raw JSON.
 """
 
@@ -396,6 +409,76 @@ def create_thumbnail_from_bytes(
 
 def build_prompt(grade_band: str, course_topic: str, context: str) -> str:
     return f"{STYLE_GUIDE_RULES}\nContext snippet: {context}\nReturn ONLY JSON."
+
+def build_topic_classifier_prompt(context: str = "") -> str:
+    """
+    Build a prompt for classifying an image into a small set of math
+    topic labels. Optionally include surrounding text as context.
+    """
+    ctx = clean_text(context, 400)
+    if ctx:
+        return f"{TOPIC_CLASSIFIER_RULES}\nContext snippet: {ctx}\nReturn ONLY JSON."
+    else:
+        return f"{TOPIC_CLASSIFIER_RULES}\nReturn ONLY JSON."
+
+
+def normalize_topic_label(raw: str) -> str:
+    """
+    Map a free-form topic string from the model into one of the
+    fixed TOPIC_LABELS. Fall back to 'Non-Math' if uncertain.
+    """
+    if not raw:
+        return "Non-Math"
+
+    raw_lower = raw.lower().strip()
+
+    # Direct exact/substring matches to canonical labels
+    mapping = {
+        "definition": "Definitions",
+        "non-math": "Non-Math",
+        "coordinate": "Coordinate System",
+        "axis": "Coordinate System",
+        "axes": "Coordinate System",
+        "linear graph": "Linear Graph",
+        "line graph": "Linear Graph",
+        "line": "Linear Graph",
+        "exponential": "Exponential Graph",
+        "growth": "Exponential Graph",
+        "decay": "Exponential Graph",
+        "linear system": "Linear Systems",
+        "system of linear": "Linear Systems",
+        "midpoint": "Midpoint Formula",
+        "pythag": "Pythagorean Theorem",
+        "right triangle": "Right Triangle",
+        "triangle": "Right Triangle",
+        "chart": "Chart Application",
+        "table": "Chart Application",
+        "bar chart": "Chart Application",
+        "number line": "Number Line",
+        "parabola": "Parabola",
+        "quadratic": "Parabola",
+        "translation": "Translations",
+        "shift": "Translations",
+        "inequality": "Linear Inequality",
+        "step function": "Step Function",
+        "piecewise": "Step Function",
+        "logarithm": "Logarithmic",
+        "log ": "Logarithmic",
+        "graph theory": "Graph Theory",
+        "network": "Graph Theory",
+        "euler": "Graph Theory",
+    }
+
+    for key, label in mapping.items():
+        if key in raw_lower:
+            return label
+
+    # If the model already returned an exact label name (case-insensitive)
+    for label in TOPIC_LABELS:
+        if label.lower() in raw_lower:
+            return label
+
+    return "Non-Math"
 
 
 

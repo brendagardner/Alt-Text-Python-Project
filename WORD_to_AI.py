@@ -151,7 +151,7 @@ def worker_process(
             standard_alt = utils.clean_text(ai_json.get("standard", ""), 600)
             long_alt = utils.clean_text(ai_json.get("long", ""), 2000)
             notes = utils.clean_text(ai_json.get("notes", ""), 1000)
-            topic = utils.clean_text(ai_json.get("topic", ""), 200)
+            topic = utils.clean_text(ai_json.get("topic", ""), 100)
 
             pid_info = docpr_map.get(rid, {})
             pic_id = pid_info.get("picture_id", "")
@@ -264,7 +264,6 @@ def main():
             raw_name = r.get("image_name", "")
             clean_name = Path(raw_name).name  # strips any folder prefix
             ws.cell(row=row, column=2, value=clean_name)
-
             ws.cell(row=row, column=3, value=r.get("picture_id", "")) #C
             ws.cell(row=row, column=4, value=loc_index)  # D - LocationIndex (within this doc)
             ws.cell(row=row, column=5, value=r.get("file_name_source", ""))

@@ -16,7 +16,7 @@
 # C: Image Link
 # D: File Name/Source (derived from URL / formula)
 # E: Image Size (original width x height)
-# F: Image Topic (HTML title attribute, placeholder)
+# F: Image Topic (AI topic 1-2 words)
 # G: Image Context (nearby text / figcaption)
 # H: Grade Level (from config)
 # I: Course Topic (from config)
@@ -63,21 +63,21 @@ warnings.simplefilter("ignore", NotOpenSSLWarning)
 # =========================
 
 # These will be written into every row (can be left "" if you want to fill later).
-DEFAULT_GRADE_BAND = "12-14"           # e.g. "10–12"
-COURSE_TOPIC = "Quantitative Reasoning"
-BOOK_SOURCE_NAME = "Lumen Euler Website"
+DEFAULT_GRADE_BAND = "6-8"           # e.g. "10–12"
+COURSE_TOPIC = "Elementary Algebra"
+BOOK_SOURCE_NAME = "Lumen Find LCD"
 
 # Folder where the Excel output file will be written
 OUTPUT_FOLDER = Path(
     "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/"
-    "Sabbatical Files - Personal (Unshared)/103x Information"
+    "Sabbatical Files - Personal (Unshared)/0990 Information"
 )
 
 # List of (URL, Section/Topic) pairs
 URLS_AND_TOPICS = [
     (
-        "https://courses.lumenlearning.com/slcc-mathforliberalartscorequisite/chapter/euler-circuits/",
-        "Euler Circuits",
+        "https://courses.lumenlearning.com/slcc-elementaryalgebra/chapter/finding-least-common-denominators/",
+        "Finding LCD",
     ),
     # Add more (url, section/topic) pairs as needed
 ]
@@ -492,9 +492,6 @@ class CombinedImageExtractor:
             )
             ws.cell(row=current_row, column=4, value=formula_str)
 
-            # F: Image Topic (using HTML title as placeholder)
-            ws.cell(row=current_row, column=6, value=image_title)
-
             # G: Image Context
             ws.cell(row=current_row, column=7, value=image_context)
 
@@ -534,6 +531,7 @@ class CombinedImageExtractor:
 
             # --- Call Abacus API if we have image bytes ---
             ai_short = ai_standard = ai_long = ai_notes = ""
+            image_topic_ai = ""  # <-- NEW
 
             if img_bytes_raw:
                 prompt = build_prompt(
@@ -545,16 +543,27 @@ class CombinedImageExtractor:
                     ai_json = call_abacus(img_bytes_raw, prompt)
                 except Exception as e:
                     print(f"⚠️ Abacus API error for row {current_row}: {e}")
-                    ai_json = {"short": "", "standard": "", "long": "", "notes": "", "topic": ""}
+                    ai_json = {
+                        "short": "",
+                        "standard": "",
+                        "long": "",
+                        "notes": "",
+                        "topic": "",
+                    }
 
                 ai_short = utils.clean_text(ai_json.get("short", ""), 250)
                 ai_standard = utils.clean_text(ai_json.get("standard", ""), 600)
                 ai_long = utils.clean_text(ai_json.get("long", ""), 2000)
                 ai_notes = utils.clean_text(ai_json.get("notes", ""), 1000)
+                image_topic_ai = utils.clean_text(ai_json.get("topic", ""), 80)
 
-                ai_short_len = len(ai_short) if ai_short else 0
-                ai_standard_len = len(ai_standard) if ai_standard else 0
-                ai_long_len = len(ai_long) if ai_long else 0
+            else:
+                image_topic_ai = ""
+
+            # F: Image Topic — prefer AI topic (1–2 words), fallback to HTML title
+            topic_value = image_topic_ai or image_title
+            ws.cell(row=current_row, column=6, value=topic_value)
+
 
             # P–V: AI alt text + char counts
             ws.cell(row=current_row, column=16, value=ai_short)        # P
@@ -596,6 +605,7 @@ class CombinedImageExtractor:
                 ws.row_dimensions[current_row].height = 20
 
             current_row += 1
+
 
         # Wrap text and autofit B–V (text columns), cap at ~240px
         text_columns = [
