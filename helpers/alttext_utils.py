@@ -29,7 +29,7 @@ STYLE_GUIDE_RULES = STYLE_GUIDE_RULES = """
 You are an accessibility expert for STEM education. Generate alt text according to these rules:
 - Be accurate and concise. Do not reveal answers not explicitly shown.
 - Use math screen-reader conventions:
-• Negatives: say “negative three,” not “-3” unless the negative is in parentheses.
+• Negatives: say “negative three,” not “-3” unless the negative is in parentheses or ordered pair.
 • Fractions: say “three-fourths”, not “3/4.”
 • Intervals/inequalities: say “x is greater than or equal to three,” avoid symbols.
 • Exponents/Roots: “x squared,” “x cubed,” “x to the fourth power.”
