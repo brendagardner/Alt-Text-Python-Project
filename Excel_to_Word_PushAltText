@@ -4,15 +4,15 @@
 # 1) Reads Excel (Picture ID, Alt Text, metadata) #Column T is new alt text to apply
 # 2) Opens DOCX, snapshots ORIGINAL alt text (pre-change)
 # 3) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
-# 4) Builds a QA report with:
+# 4) Builds a QA report with: original columns (no additional review)
 
 # to Fix:  
-#  - Output file not capturing original file, page number, or applying an image topic.  But doing good job capturing .wmf files not found in Word_AI_Output_file
 #  - Not applying alt text to duplicate images
-# - UPDATE REPORT TO INCLUDE ALL COLUMNS
+# - Review to ensure REPORT TO INCLUDES ALL MASTER COLUMNS
 
 # OUTPUT EXCEL FILE: Use Visual Basic script to put images in cell
 # Brenda Gardner — Updated Nov 5 2025 (revised per requested changes)
+# Dec 10 -removed .wmf files in Word report. 
 # ====
 
 import zipfile
@@ -49,7 +49,7 @@ REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
 
 # Excel column mapping (letters).
 PICTURE_ID_COLUMN = column_index_from_string("C")  # Excel Picture ID
-ALT_TEXT_COLUMN   = column_index_from_string("T")  # Excel Alt Text ("P" or "T" per your sheet)
+ALT_TEXT_COLUMN   = column_index_from_string("T")  # Use Excel Suggested Alt Text ("T")
 FILE_NAME_COLUMN  = column_index_from_string("J")
 SECTION_COLUMN    = column_index_from_string("K")
 PAGE_NUMBER_COLUMN= column_index_from_string("L")
