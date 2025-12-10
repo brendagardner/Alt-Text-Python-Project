@@ -39,17 +39,17 @@ from docx import Document  # NEW: for heading-based Section extraction
 # CONFIG — EDIT THESE
 # ====
 DOCX_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Lecture Notes Chapters 1-5/Math 1010 Lecture Notes Module [...]"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing/Section 1.3 OER College Algebra Spr2021.docx"
 )
 EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1010 Information/1010 Test Files/Mod 2 Push Alt Text.xlsx")
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing/1050_1.3_Suggested_AltText.xlsx")
 
 OUTPUT_DOCX  = DOCX_PATH.with_name(DOCX_PATH.stem + "_withAltText.docx")
 REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
 
 # Excel column mapping (letters).
 PICTURE_ID_COLUMN = column_index_from_string("C")  # Excel Picture ID
-ALT_TEXT_COLUMN   = column_index_from_string("T")  # Excel Alt Text ("P" or "T" per your sheet)
+ALT_TEXT_COLUMN   = column_index_from_string("T")  # Review Excel Alt Text ("T")
 FILE_NAME_COLUMN  = column_index_from_string("J")
 SECTION_COLUMN    = column_index_from_string("K")
 PAGE_NUMBER_COLUMN= column_index_from_string("L")
@@ -126,7 +126,7 @@ def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, 
             return
 
         suffix = Path(target_filename).suffix.lower()
-        if suffix in [".emf", ".wmf", ".svg"]:
+        if suffix in [".emf", ".svg"]:
             converted = convert_vector_to_png_bytes(img_bytes, suffix, tmp_dir)
             if converted:
                 img_bytes = converted

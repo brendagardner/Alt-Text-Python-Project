@@ -1,6 +1,6 @@
 # This script takes an existing Excel file whose columns A–O are already filled (same layout as your website alt-text/export sheet), and then:
 # - Uses Column C (Image Link) to re-download images
-# - Calls Abacus AI to generate alt text
+# - Calls Abacus AI to generate alt text if Column N (Current Alt Text) is empty - Change on Row 155
 # - Fills Columns P–S:
 #     P: AI Short Alt Text
 #     Q: AI Standard Alt Text
@@ -32,14 +32,14 @@ warnings.simplefilter("ignore", NotOpenSSLWarning)
 
 # Excel file that already has columns A–O filled
 INPUT_EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Test_Excel_AI_Euler_AI.xlsx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0990 Information/990 Lumen AI Small Push.xlsx"
 )
 
-# Optional: sheet name; if "", use active sheet
-SHEET_NAME = "v2"  # e.g. "Website Alt Text AI Output"
+# Optional: sheet name on Workbook; use "" if want active sheet
+SHEET_NAME = "0990 Extracted Images"  # e.g. "Website Alt Text AI Output"
 
 # Grade band & course topic are only used for the AI prompt context
-DEFAULT_GRADE_BAND = "6-8"
+DEFAULT_GRADE_BAND = "6-9"
 COURSE_TOPIC = "Elementary Algebra"
 
 # Abacus AI config
@@ -150,16 +150,16 @@ def main():
     # Loop over rows 2..max_row
     for row_idx in range(2, ws.max_row + 1):
         image_link_cell = ws.cell(row=row_idx, column=3)   # C: Image Link
-        ai_short_cell = ws.cell(row=row_idx, column=16)    # P
+
+        #Update below if changing column to review and skip AI
+        current_alt_cell = ws.cell(row=row_idx, column=20)  # N: Current Alt Text Change column = 14, # T: Suggested Alt Text column = 20
+        if current_alt_cell.value not in (None, ""):
+            continue
 
         image_url = (image_link_cell.value or "").strip()
 
         # Skip rows with no image link
         if not image_url:
-            continue
-
-        # Skip if P already has content (already processed)
-        if ai_short_cell.value not in (None, ""):
             continue
 
         # Pull some context from existing columns:

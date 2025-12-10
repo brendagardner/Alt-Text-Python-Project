@@ -30,18 +30,67 @@ from helpers import alttext_utils as utils
 # =========================
 # These will be written into every row (can be left "" if you want to fill later).
 DEFAULT_GRADE_BAND = "12-14"       # e.g. "10–12"
-COURSE_TOPIC = "Quantitative Reasoning"      # e.g. "College Algebra"
-BOOK_SOURCE_NAME = "Lumen Hamiltonian Circuits"
+COURSE_TOPIC = "College Algebra"      # e.g. "College Algebra"
+BOOK_SOURCE_NAME = "College Algebra: An Open Resource"
 
 # Folder where the Excel output file will be written
 OUTPUT_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information"
 )
 
 # List of (URL, Section/Topic) pairs
 URLS_AND_TOPICS = [
-    ("https://courses.lumenlearning.com/slcc-mathforliberalartscorequisite/chapter/hamiltonian-circuits/",
-     "Hamiltonian Circuits"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m1/", "1. Exponential Notation and Order of Operations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/introduction-to-algebraic-expressions/", "2. Introduction to Algebraic Expressions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/properties-of-exponents-and-scientific-notation/", "3. Properties of Exponents and Scientific Notation"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/solving-equations/", "1. Solving Equations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/sets-inequalities-and-interval-notation/", "2. Sets, Inequalities, and Interval Notation"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/absolute-value-equations-and-inequalities/", "3. Absolute-Value Equations and Inequalities"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-2/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/graphs-of-equations/", "1. Graphs of Equations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/functions-and-graphs/", "2. Functions and Graphs"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/3-finding-domain-and-range/", "3. Finding Domain and Range"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/the-algebra-of-functions/", "4. The Algebra of Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/5-linear-functions-graphs-and-slopes/", "5. Linear Functions: Graphs and Slopes"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/6-more-on-graphing-linear-equations/", "6. More on Graphing Linear Equations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/7-finding-equations-of-lines-applications/", "7. Finding Equations of Lines; Applications"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-3/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m4/", "1. Introduction to Polynomials and Polynomial Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/2-multiplication-of-polynomials/", "2. Multiplication of Polynomials"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/3-introduction-to-factoring/", "3. Introduction to Factoring"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/4-factoring-trinomials-x%c2%b2-bx-c/", "4. Factoring Trinomials: (x² + bx + c)"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/5-factoring-trinomials-ax%c2%b2-bx-c/", "5. Factoring Trinomials: (ax² + bx + c)"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/6-special-factoring/", "6. Special Factoring"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/7-factoring-a-general-strategy/", "7. Factoring: A General Strategy"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-4/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m5/", "1. Multiply and Divide Rational Expressions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/2-addition-and-subtraction-of-fractions-with-unlike-denominators/", "2. Addition and Subtraction of Fractions with Unlike Denominators"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-5/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m6/", "1. Simplify Radical Expressions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/2-solving-radical-equations/", "2. Solving Radical Equations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/3-increasing-decreasing-and-piecewise-functions/", "3. Increasing, Decreasing, and Piecewise Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-6/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m7/", "1. Complex Numbers"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/1-complex-numbers/", "2. Quadratic Equations, Functions, Zeros, and Models"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/3-analyzing-graphs-of-quadratic-functions/", "3. Analyzing Graphs of Quadratic Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-7/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/m8/", "1. Polynomial Functions and Models"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/2-graphing-polynomial-functions/", "2. Graphing Polynomial Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/3-polynomial-division-the-remainder-and-factor-theorems/", "3. Polynomial Division; The Remainder and Factor Theorems"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/4-theorems-about-zeros-of-polynomial-functions/", "4. Theorems About Zeros of Polynomial Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/5-rational-functions/", "5. Rational Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/6-polynomial-and-rational-inequalities/", "6. Polynomial and Rational Inequalities"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-8/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/the-composition-of-functions/", "1. The Composition of Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/inverse-functions/", "2. Inverse Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/exponential-functions-and-graphs/", "3. Exponential Functions and Graphs"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/logarithmic-functions-and-graphs/", "4. Logarithmic Functions and Graphs"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/properties-of-logarithmic-functions/", "5. Properties of Logarithmic Functions"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/solving-exponential-and-logarithmic-equations/", "6. Solving Exponential and Logarithmic Equations"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/applications-and-models-growth-and-decay-and-compound-interest/", "7. Applications and Models: Growth and Decay; and Compound Interest"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/practice-activity-with-answer-keys-9/", "Practice Activity with Answer Keys"),
+("https://acd.pressbooks.pub/college-algebra-an-open-resource/chapter/matrices-and-systems-of-equations/", "Matrices and Systems of Equations"),
 ]
 
 
