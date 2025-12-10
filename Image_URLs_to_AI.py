@@ -1,6 +1,6 @@
 # This script takes an existing Excel file whose columns A–O are already filled (same layout as your website alt-text/export sheet), and then:
 # - Uses Column C (Image Link) to re-download images
-# - Calls Abacus AI to generate alt text
+# - Calls Abacus AI to generate alt text if Column N (Current Alt Text) is empty - Change on Row 155
 # - Fills Columns P–S:
 #     P: AI Short Alt Text
 #     Q: AI Standard Alt Text
@@ -150,16 +150,16 @@ def main():
     # Loop over rows 2..max_row
     for row_idx in range(2, ws.max_row + 1):
         image_link_cell = ws.cell(row=row_idx, column=3)   # C: Image Link
-        ai_short_cell = ws.cell(row=row_idx, column=16)    # P
+        
+        #Update below if changing column to review and skip AI
+        current_alt_cell = ws.cell(row=row_idx, column=20)  # N: Current Alt Text Change column = 14, # T: Suggested Alt Text column = 20
+        if current_alt_cell.value not in (None, ""):
+            continue
 
         image_url = (image_link_cell.value or "").strip()
 
         # Skip rows with no image link
         if not image_url:
-            continue
-
-        # Skip if P already has content (already processed)
-        if ai_short_cell.value not in (None, ""):
             continue
 
         # Pull some context from existing columns:
