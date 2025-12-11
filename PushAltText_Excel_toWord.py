@@ -13,7 +13,6 @@
 
 # to Fix:
 # Not applying alt text to duplicate images - For now review output file for missing Alt Text
-# add today as date of completion in Column U
 
 # ====
 
