@@ -7,6 +7,8 @@
 # Brenda Gardner — Created Nov 4 2025
 # Dec 10 @12:20 - Updated column layout A–X per new Master File
 
+#to fix:  make date sortable - copy from PushAltText_Excel_toWord.py
+
 import os
 import re
 import json
@@ -33,11 +35,13 @@ from lxml import etree
 # =========================
 # CONFIG — EDIT THESE
 # =========================
-# Folder where the Word DOCX files are located
-FOLDER_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Small Test Word to AI"
+# INPUT_PATH can be EITHER:
+#   • a folder containing .docx files, OR
+#   • a single .docx file
+INPUT_PATH = Path(
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/2023 Textbook/Cryptography_6_images.docx"
 )
-OUTPUT_EXCEL_PREFIX = "103x_Voting_Theory_AI"
+OUTPUT_EXCEL_PREFIX = "103x_Cryptography_AI"
 DEFAULT_GRADE_BAND = "12-14"
 COURSE_TOPIC = "Quantitative Reasoning"
 
@@ -207,13 +211,29 @@ def worker_process(
 
 
 def main():
-    print(f"📂 Scanning folder: {FOLDER_PATH}")
-    if not FOLDER_PATH.exists():
-        raise FileNotFoundError(f"❌ Folder does not exist: {FOLDER_PATH}")
+    # --- Resolve input: single file or folder ---
+    print(f"🔍 Checking input path: {INPUT_PATH}")
 
-    docx_files = sorted(FOLDER_PATH.glob("*.docx"))
+    if not INPUT_PATH.exists():
+        raise FileNotFoundError(f"❌ INPUT_PATH does not exist: {INPUT_PATH}")
+
+    if INPUT_PATH.is_dir():
+        # Folder mode: all .docx files in the folder
+        docx_files = sorted(INPUT_PATH.glob("*.docx"))
+        output_dir = INPUT_PATH
+        print(f"📂 Folder mode. Found {len(docx_files)} .docx file(s) in {INPUT_PATH}")
+    elif INPUT_PATH.is_file():
+        # Single-file mode: just that file
+        if INPUT_PATH.suffix.lower() != ".docx":
+            raise ValueError(f"❌ INPUT_PATH is a file but not a .docx: {INPUT_PATH}")
+        docx_files = [INPUT_PATH]
+        output_dir = INPUT_PATH.parent
+        print(f"📄 Single-file mode. Processing one DOCX: {INPUT_PATH.name}")
+    else:
+        raise ValueError(f"❌ INPUT_PATH is neither a file nor a folder: {INPUT_PATH}")
+
     if not docx_files:
-        print("⚠️ No .docx files found.")
+        print("⚠️ No .docx files found to process.")
         return
 
     wb = Workbook()
@@ -445,7 +465,8 @@ def main():
         max_col_width_px=240,
     )
 
-    out = FOLDER_PATH / f"{OUTPUT_EXCEL_PREFIX}_{datetime.datetime.now():%Y%m%d_%H%M%S}.xlsx"
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    out = output_dir / f"{OUTPUT_EXCEL_PREFIX}_{timestamp}.xlsx"
     wb.save(out)
     print(f"\n✅ Completed — Excel saved to:\n{out}")
 

@@ -1,18 +1,20 @@
-# ====
+# This is a copy of Excel_to_Word_AltText.py with to support new columns in output file.
+# Updated by Brenda Gardner on Dec 10, 2025 so output file matches Master file. Added helpers file to share code.
+# removed .wmf files in Word report, but kept .emf files in Excel file report
+
 # UNIFIED: MATCH BY PICTURE ID, APPLY ALT TEXT, AND BUILD QA REPORT
 # What this script does:
-# 1) Reads Excel (Picture ID, Alt Text, metadata) #Column T is new alt text to apply
+# 1) Reads Excel (Picture ID, #Column T for alt text to apply)
 # 2) Opens DOCX, snapshots ORIGINAL alt text (pre-change)
-# 3) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
-# 4) Builds a QA report with: original columns (no additional review)
+# 3) Reviews Word for other Equations that are not in Equation Editor
+# 4) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
+# 5) Builds a QA report with: original columns (no additional review)
+# Note: OUTPUT EXCEL FILE: Use Visual Basic script to put images in cell
 
-# to Fix:  
-#  - Not applying alt text to duplicate images
-# - Review to ensure REPORT TO INCLUDES ALL MASTER COLUMNS
+# to Fix:
+# Not applying alt text to duplicate images - For now review output file for missing Alt Text
+# add today as date of completion in Column U
 
-# OUTPUT EXCEL FILE: Use Visual Basic script to put images in cell
-# Brenda Gardner — Updated Nov 5 2025 (revised per requested changes)
-# Dec 10 -removed .wmf files in Word report. 
 # ====
 
 import zipfile
@@ -23,6 +25,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Union, Tuple
 from collections import defaultdict
+import datetime
 
 import openpyxl
 from openpyxl import Workbook
@@ -31,19 +34,20 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter, column_index_from_string
 from lxml import etree
 from PIL import Image as PILImage
+from docx import Document
 
-from docx import Document  # NEW: for heading-based Section extraction
+from helpers import alttext_utils as utils
 
 # ====
 # CONFIG — EDIT THESE
 # ====
 DOCX_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing/Section 1.3 OER College Algebra Spr2021.docx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/2023 Textbook/Cryptography_8_images.docx"
 )
 
 EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Testing/1050_1.3_Suggested_AltText.xlsx")
-
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Small Test Word to AI/103x_Cryptography_AltText_Apply.xlsx"
+)
 OUTPUT_DOCX  = DOCX_PATH.with_name(DOCX_PATH.stem + "_withAltText.docx")
 REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
 
@@ -118,11 +122,12 @@ def resize_png(png_bytes: bytes, width: int = IMAGE_WIDTH) -> Tuple[bytes, int]:
     return out.getvalue(), new_h
 
 def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, tmp_dir: Path):
-    """Extract image from DOCX and embed in Excel."""
+    """Extract image from DOCX and embed in Excel (bigger, similar to AI script)."""
     try:
         img_bytes = load_image_bytes(docx_path, f"media/{target_filename}")
         if not img_bytes:
             ws.cell(row=row, column=1, value=f"(missing: {target_filename})")
+            ws.row_dimensions[row].height = 50
             return
 
         suffix = Path(target_filename).suffix.lower()
@@ -131,24 +136,36 @@ def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, 
             if converted:
                 img_bytes = converted
             else:
-                ws.cell(row=row, column=1, value=f"(vector file: {target_filename} — not rendered)")
+                ws.cell(
+                    row=row,
+                    column=1,
+                    value=f"(vector file: {target_filename} — not rendered)",
+                )
                 ws.row_dimensions[row].height = 80
                 return
 
-        # Save the resized image as a temporary file (avoid BytesIO closure)
-        resized_bytes, new_height = resize_png(img_bytes, width=IMAGE_WIDTH)
-        tmp_png_path = tmp_dir / f"{Path(target_filename).stem}_temp.png"
-        with open(tmp_png_path, "wb") as f:
-            f.write(resized_bytes)
+        # Use original image bytes (no forced downscale), similar to AI script
+        width = height = 0
+        try:
+            pil_img = PILImage.open(BytesIO(img_bytes))
+            width, height = pil_img.size
+        except Exception:
+            pass
 
-        xl_img = XLImage(str(tmp_png_path))  # use path, not BytesIO
-        xl_img.width = IMAGE_WIDTH
-        xl_img.height = new_height
+        img_stream = BytesIO(img_bytes)
+        xl_img = XLImage(img_stream)
         ws.add_image(xl_img, f"A{row}")
-        ws.row_dimensions[row].height = new_height * 0.75
+
+        # Row height scaled like the AI script (uses ROW_HEIGHT_SCALE from utils)
+        scale = getattr(utils, "ROW_HEIGHT_SCALE", 0.75)
+        if height:
+            ws.row_dimensions[row].height = int(height * scale)
+        else:
+            ws.row_dimensions[row].height = 80
 
     except Exception as e:
         ws.cell(row=row, column=1, value=f"(error: {target_filename}: {e})")
+        ws.row_dimensions[row].height = 50
         print(f"⚠ Could not insert {target_filename}: {e}")
 
 def adjust_row_height(ws, row: int, img_height: int = None, min_height: int = 50):
@@ -510,25 +527,40 @@ wb = Workbook()
 ws = wb.active
 ws.title = "AltText QA Report"
 
-# --- Header setup ---
 headers = [
-    "Thumbnail",           # A
-    "Image Name",          # B
-    "Picture ID",          # C
-    "Original File",       # D
-    "Image Topic",         # E (NEW)
-    "Section/Module",      # F
-    "Page #",              # G
-    "In Word?",            # H
-    "In Excel?",           # I
-    "Word Alt Text",       # J
-    "Applied/New Alt Text (Excel)", # K
-    "Word Action",         # L
-    "Status",              # M
-    "Notes"                # N
+    "Image Thumbnail",                         # A
+    "Image Filename",                          # B
+    "Picture ID",                              # C
+    "File Name",                               # D
+    "Image Size",                              # E
+    "Image Topic",                             # F
+    "Image Context",                           # G
+    "Grade Level",                             # H
+    "Course Name",                             # I
+    "Original File Name/Source (Hyperlink)",   # J
+    "Section/Module",                          # K
+    "Page",                                    # L
+    "Original Author",                         # M
+    "Original Alt Text",                       # N
+    "Original Alt Text Character Count",       # O
+    "Original Alt Text Notes",                 # P
+    "Applied Alt Text",                        # Q
+    "Applied Alt Text Character Count",        # R
+    "Applied Alt Text Notes",                  # S
+    "Status",                                  # T
+    "Date of Completion",                      # U
+    "TBD",                                     # V
+    "Approved by",                             # W
+    "Reviewer Notes",                          # X
+    "In Word?",                                # Y
+    "In Excel?",                               # Z
 ]
 
-col_widths = [50, 30, 25, 25, 20, 12, 10, 10, 10, 70, 40, 20, 18, 40]
+col_widths = [
+    50, 30, 18, 25, 12, 20, 20, 12, 18, 30,
+    18, 10, 18, 60, 12, 30, 60, 12, 40, 14,
+    16, 10, 18, 22, 10, 10,
+]
 
 for col, h in enumerate(headers, start=1):
     c = ws.cell(row=1, column=col, value=h)
@@ -545,6 +577,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
 
     new_alt_applied_count = 0
     row_num = 2
+    run_date = datetime.date.today()
 
     for name in all_images:
         # Try to find Excel record by: 1) filename, 2) Picture ID from Word
@@ -588,13 +621,12 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         if name in media_files:
             try:
                 insert_image_from_docx(ws, OUTPUT_DOCX, name, row_num, tmp_dir)
-                adjust_row_height(ws, row_num, ws.row_dimensions[row_num].height)
             except Exception as e:
                 ws.cell(row=row_num, column=1, value=f"(no image: {e})")
-                adjust_row_height(ws, row_num)
+                ws.row_dimensions[row_num].height = 50
         else:
             ws.cell(row=row_num, column=1, value="(Excel-only — no thumbnail)")
-            adjust_row_height(ws, row_num, None, min_height=50)
+            ws.row_dimensions[row_num].height = 50
 
         # --- Picture ID(s) for this image (Column C) ---
         picture_id = rec.get("picture_id", "")
@@ -612,28 +644,67 @@ with tempfile.TemporaryDirectory() as tmp_dir:
             if titles:
                 section = " | ".join(titles)
 
-        # --- Write base metadata (Columns B–F) ---
-        ws.cell(row=row_num, column=2, value=name)           # Image Name (B)
-        ws.cell(row=row_num, column=3, value=picture_id)     # Picture ID (C)
-        ws.cell(row=row_num, column=4, value=file_name)      # Original File (D)
-        ws.cell(row=row_num, column=5, value=topic_val)      # Image Topic (E) NEW
-        ws.cell(row=row_num, column=6, value=section)        # Section/Module (F)
-        ws.cell(row=row_num, column=7, value=page_num)       # Page # (G)
+        # --- Write base metadata into new A–Z layout ---
 
-        # --- In Word / In Excel flags (H,I) ---
-        ws.cell(row=row_num, column=8, value=in_word)
-        ws.cell(row=row_num, column=9, value=in_excel)
+        # B: Image Filename
+        ws.cell(row=row_num, column=2, value=name)
 
-        # --- Alt Text columns (J,K) ---
-        ws.cell(row=row_num, column=10, value=word_alt_text).alignment = shrink_wrap_alignment
-        cell_new = ws.cell(row=row_num, column=11, value=applied_alt_val)
-        cell_new.alignment = shrink_wrap_alignment
+        # C: Picture ID
+        ws.cell(row=row_num, column=3, value=picture_id)
 
-        # --- Word Action + Status determination (L,M) ---
+        # D: File Name (from Excel file_name)
+        ws.cell(row=row_num, column=4, value=file_name)
+
+        # E: Image Size (leave blank for now)
+        #    (You can later compute from the image if you’d like.)
+        # ws.cell(row=row_num, column=5, value="")
+        # F: Image Topic (from Excel)
+        ws.cell(row=row_num, column=6, value=topic_val)
+
+        # G: Image Context (blank for now)
+        # ws.cell(row=row_num, column=7, value="")
+
+        # H: Grade Level (blank)
+        # I: Course Name (blank)
+
+        # J: Original File Name/Source (copy file_name; hyperlink if it looks like a URL)
+        cell_j = ws.cell(row=row_num, column=10, value=file_name)
+        if file_name.startswith("http://") or file_name.startswith("https://"):
+            cell_j.hyperlink = file_name
+            cell_j.style = "Hyperlink"
+
+        # K: Section/Module
+        ws.cell(row=row_num, column=11, value=section)
+
+        # L: Page
+        ws.cell(row=row_num, column=12, value=page_num)
+
+        # M: Original Author (blank for now)
+        # ws.cell(row=row_num, column=13, value="")
+
+        # N: Original Alt Text (Word Alt Text, pre-change)
+        cell_orig_alt = ws.cell(row=row_num, column=14, value=word_alt_text)
+        cell_orig_alt.alignment = shrink_wrap_alignment
+
+        # O: Original Alt Text Character Count
+        ws.cell(row=row_num, column=15, value=len(word_alt_text) if word_alt_text else 0)
+
+        # P: Original Alt Text Notes (blank for now)
+        # ws.cell(row=row_num, column=16, value="")
+
+        # Q: Applied Alt Text (Excel)
+        cell_applied = ws.cell(row=row_num, column=17, value=applied_alt_val)
+        cell_applied.alignment = shrink_wrap_alignment
+
+        # R: Applied Alt Text Character Count
+        ws.cell(row=row_num, column=18, value=len(applied_alt_val) if applied_alt_val else 0)
+
+        # S: Applied Alt Text Notes (from old Notes column)
+        ws.cell(row=row_num, column=19, value=notes).alignment = wrap_alignment
+
+        # --- Status determination (no visible Word Action column) ---
         word_action = word_action_log.get(name, "No Change")
-        ws.cell(row=row_num, column=12, value=word_action)
 
-        # Determine status
         if word_action in ("Alt Text Added", "Marked as Decorative"):
             status = "OK"
         elif word_action in ("Not in Excel", "Modify this image", "No Change"):
@@ -645,7 +716,8 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         else:
             status = "Review"
 
-        s_cell = ws.cell(row=row_num, column=13, value=status)
+        # T: Status
+        s_cell = ws.cell(row=row_num, column=20, value=status)
         if status == "OK":
             s_cell.font = Font(bold=True, color=GREEN_FONT)
         elif status == "Review":
@@ -653,12 +725,89 @@ with tempfile.TemporaryDirectory() as tmp_dir:
         else:
             s_cell.font = Font(bold=True)
 
-        ws.cell(row=row_num, column=14, value=notes).alignment = wrap_alignment
+        # U: Date of Completion (date script was run)
+        date_cell = ws.cell(row=row_num, column=21, value=run_date)
+        date_cell.number_format = "mm-dd-yyyy"
+
+        # V: TBD (blank)
+        # W: Approved by (blank)
+        # X: Reviewer Notes (blank)
+
+        # Y: In Word?
+        ws.cell(row=row_num, column=25, value=in_word)
+
+        # Z: In Excel?
+        ws.cell(row=row_num, column=26, value=in_excel)
+
         row_num += 1
 
     # ====
     # SUMMARY SHEET — built inside temp block (so thumbnails persist)
     # ====
+    # === Column sizing & wrapping (similar to AI script) ===
+
+    # Make thumbnail column wide in pixels (converted to Excel width)
+    ws.column_dimensions["A"].width = utils._pixels_to_column_width(600)
+
+    # Base widths for the rest (similar feel to AI script)
+    ws.column_dimensions["B"].width = 30  # Image Filename
+    ws.column_dimensions["C"].width = 18  # Picture ID
+    ws.column_dimensions["D"].width = 25  # File Name
+    ws.column_dimensions["E"].width = 14  # Image Size
+    ws.column_dimensions["F"].width = 25  # Image Topic
+    ws.column_dimensions["G"].width = 35  # Image Context
+    ws.column_dimensions["H"].width = 12  # Grade Level
+    ws.column_dimensions["I"].width = 20  # Course Name
+    ws.column_dimensions["J"].width = 30  # Original File Name/Source
+    ws.column_dimensions["K"].width = 20  # Section/Module
+    ws.column_dimensions["L"].width = 8   # Page
+    ws.column_dimensions["M"].width = 20  # Original Author
+    ws.column_dimensions["N"].width = 60  # Original Alt Text
+    ws.column_dimensions["O"].width = 16  # Original Alt Text Char Count
+    ws.column_dimensions["P"].width = 40  # Original Alt Text Notes
+    ws.column_dimensions["Q"].width = 60  # Applied Alt Text
+    ws.column_dimensions["R"].width = 16  # Applied Alt Text Char Count
+    ws.column_dimensions["S"].width = 40  # Applied Alt Text Notes
+    ws.column_dimensions["T"].width = 14  # Status
+    ws.column_dimensions["U"].width = 16  # Date of Completion
+    ws.column_dimensions["V"].width = 12  # TBD
+    ws.column_dimensions["W"].width = 20  # Approved by
+    ws.column_dimensions["X"].width = 30  # Reviewer Notes
+    ws.column_dimensions["Y"].width = 10  # In Word?
+    ws.column_dimensions["Z"].width = 10  # In Excel?
+
+    # Columns that should wrap and be auto-fitted
+    text_columns = [
+        "B",  # Image Filename
+        "C",  # Picture ID
+        "D",  # File Name
+        "E",  # Image Size
+        "F",  # Image Topic
+        "G",  # Image Context
+        "H",  # Grade Level
+        "I",  # Course Name
+        "J",  # Original File Name/Source
+        "K",  # Section/Module
+        "L",  # Page
+        "M",  # Original Author
+        "N",  # Original Alt Text
+        "P",  # Original Alt Text Notes
+        "Q",  # Applied Alt Text
+        "S",  # Applied Alt Text Notes
+        "T",  # Status
+        "V",  # TBD / misc notes
+        "W",  # Approved by
+        "X",  # Reviewer Notes
+        "Y",  # In Word?
+        "Z",  # In Excel?
+    ]
+
+    utils.wrap_and_autofit_columns(
+        ws,
+        text_columns=text_columns,
+        max_col_width_px=240,
+    )
+
     summary_ws = wb.create_sheet("Summary")
     summary_ws["A1"] = "Alt Text Report Summary"
     summary_ws["A1"].font = Font(bold=True, size=14)
@@ -677,7 +826,7 @@ with tempfile.TemporaryDirectory() as tmp_dir:
 
     status_counts = {}
     for r in range(2, ws.max_row + 1):
-        val = ws.cell(row=r, column=13).value
+        val = ws.cell(row=r, column=20).value  # Status is now in column T
         if val:
             status_counts[val] = status_counts.get(val, 0) + 1
 
