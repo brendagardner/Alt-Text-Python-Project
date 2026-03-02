@@ -6,9 +6,8 @@
 # 2. REVIEW FOLDER, OUTPUT FILE NAME AND VISION MODEL
 
 # Brenda Gardner — Created Nov 4 2025
-# updated Feb 17 to use Zamzar API for EMF to PNG conversion
-# Updated Feb 18 to add converted images to a sub folder specified, put figure numer in column J and fixed page numbers
-# Updated Feb 19 to input "Ex*.*.*" in Column J for example figures, added output folder for images
+# updated Feb 17 to use Zamzar API for EMF to PNG conversion - Currently only doing .emf files - unblock rows around 270 to push all images through APIs
+# Updated Feb 18 to add converted images to a sub folder specified, put figure numer in column J and fix page number
 
 import os
 import re
@@ -40,20 +39,18 @@ from lxml import etree
 #   • a folder containing .docx files, OR
 #   • a single .docx file
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/BAIN_Mod4_Accessible_Lecture Notes.docx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 2/Exercises"
 )
-OUTPUT_EXCEL_PREFIX = "0920_BAIN_Mod4_AltText"
-OUTPUT_EXCEL_PATH = Path(f"{OUTPUT_EXCEL_PREFIX}.xlsx")
-OUTPUT_WORD_PATH = Path(f"{OUTPUT_EXCEL_PREFIX}.docx")
-DEFAULT_GRADE_BAND = "6-8"
-COURSE_TOPIC = "Foundational Math"
+OUTPUT_EXCEL_PREFIX = "1050_Mod2_Exercises_EMF_Only"
+DEFAULT_GRADE_BAND = "10-14"
+COURSE_TOPIC = "College Algebra"
 
 # PS file output folder
 #PS_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/OER Trigonometry Textbook 2023/Module 1/Sections 1.2-1.6/Sections 1.2-1.6 Files")
 #PS_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # PNG file output folder (High Quality for Web)
-PNG_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/920 Images/Module 4 Images")
+PNG_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 2/Module 2 Images/Exercises Images")
 PNG_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # API KEYS
@@ -61,10 +58,9 @@ ZAMZAR_API_KEY = os.getenv('ZAMZAR')
 if not ZAMZAR_API_KEY:
     print("⚠️ Warning: ZAMZAR API key not found. EMF conversion will be skipped.")
 
-ZAMZAR_BASE_URL = "https://api.zamzar.com"
-ZAMZAR_JOBS_URL = f"{ZAMZAR_BASE_URL}/v1/jobs"
 
-LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+# EMF conversion is handled via Zamzar (see utils.convert_emf_via_zamzar).
+# LibreOffice is no longer used for EMF on macOS due to quality issues.
 ABACUS_API_KEY = os.getenv("ABACUS_API_KEY")
 ROUTE_LLM_ENDPOINT = "https://routellm.abacus.ai/v1/chat/completions"
 VISION_MODEL = "route-llm" #meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8 is cheapest
@@ -124,131 +120,8 @@ def call_abacus(img_bytes: bytes, prompt: str) -> Dict[str, str]:
     return js
 
 
-def convert_emf_via_zamzar(img_bytes: bytes, original_filename: str) -> Tuple[bytes, bytes]:
-    """
-    """
-    # Convert EMF to High-Quality PNG using Zamzar API.
-    # Saves the PNG to PNG_OUTPUT_FOLDER.
-    """
-    Convert EMF to PNG using Zamzar API.
-    (.ps conversion is currently commented out to save credits)
-    Returns: (png_bytes, None) or (None, None) on failure
-    """
-    if not ZAMZAR_API_KEY:
-        print("⚠️ Skipping Zamzar conversion: no API key")
-        return None, None
-
-    try:
-        # Step 1: Upload EMF and request conversion to PNG with High DPI
-        files = {'source_file': (original_filename, BytesIO(img_bytes), 'image/x-emf')}
-
-        # Added export_options for high quality (300 DPI)
-        data = {
-            'target_format': 'png',
-            'export_options': 'dpi=300'
-        }
-
-        response = requests.post(
-            ZAMZAR_JOBS_URL,
-            auth=(ZAMZAR_API_KEY, ''),
-            files=files,
-            data=data,
-            timeout=60
-        )
-        response.raise_for_status()
-        job_png = response.json()
-        job_id_png = job_png['id']
-
-        # --- PS CONVERSION OPTION (DISABLED TO SAVE CREDITS) ---
-        # Step 2: Upload EMF and request conversion to PS
-        # files = {'source_file': (original_filename, BytesIO(img_bytes), 'image/x-emf')}
-        # data = {'target_format': 'ps'}
-        # response = requests.post(
-        #     ZAMZAR_JOBS_URL,
-        #     auth=(ZAMZAR_API_KEY, ''),
-        #     files=files,
-        #     data=data,
-        #     timeout=60
-        # )
-        # response.raise_for_status()
-        # job_ps = response.json()
-        # job_id_ps = job_ps['id']
-        # -------------------------------------------------------
-
-        # Step 3: Poll for PNG completion
-        png_bytes = None
-        for _ in range(30):
-            status_response = requests.get(
-                f"{ZAMZAR_BASE_URL}/v1/jobs/{job_id_png}",
-                auth=(ZAMZAR_API_KEY, ''),
-                timeout=30
-            )
-            status_response.raise_for_status()
-            status = status_response.json()
-
-            if status['status'] == 'successful':
-                file_id = status['target_files'][0]['id']
-                download_response = requests.get(
-                    f"{ZAMZAR_BASE_URL}/v1/files/{file_id}/content",
-                    auth=(ZAMZAR_API_KEY, ''),
-                    timeout=60
-                )
-                download_response.raise_for_status()
-                png_bytes = download_response.content
-
-                # --- NEW: Save High-Quality PNG to Folder ---
-                png_filename = Path(original_filename).stem + ".png"
-                png_path = PNG_OUTPUT_FOLDER / png_filename
-                with open(png_path, 'wb') as f:
-                    f.write(png_bytes)
-                print(f"✅ Saved High-Quality PNG: {png_path}")
-                # --------------------------------------------
-                break
-
-            elif status['status'] == 'failed':
-                print(f"❌ Zamzar PNG conversion failed for {original_filename}")
-                break
-
-            import time
-            time.sleep(10)
-
-        # --- PS POLLING OPTION (DISABLED TO SAVE CREDITS) ---
-        # ps_bytes = None
-        # for _ in range(30):
-        #     status_response = requests.get(
-        #         f"{ZAMZAR_BASE_URL}/v1/jobs/{job_id_ps}",
-        #         auth=(ZAMZAR_API_KEY, ''),
-        #         timeout=30
-        #     )
-        #     status_response.raise_for_status()
-        #     status = status_response.json()
-        #     if status['status'] == 'successful':
-        #         file_id = status['target_files'][0]['id']
-        #         download_response = requests.get(
-        #             f"{ZAMZAR_BASE_URL}/v1/files/{file_id}/content",
-        #             auth=(ZAMZAR_API_KEY, ''),
-        #             timeout=60
-        #         )
-        #         download_response.raise_for_status()
-        #         ps_bytes = download_response.content
-        #         ps_filename = Path(original_filename).stem + ".ps"
-        #         ps_path = PS_OUTPUT_FOLDER / ps_filename
-        #         with open(ps_path, 'wb') as f:
-        #             f.write(ps_bytes)
-        #         print(f"✅ Saved PS file: {ps_path}")
-        #         break
-        #     elif status['status'] == 'failed':
-        #         print(f"❌ Zamzar PS conversion failed for {original_filename}")
-        #         break
-        #     import time
-        #     time.sleep(10)
-        # -------------------------------------------------------
-
-        return png_bytes, None # Returning None for ps_bytes since it's disabled
-
-    except Exception as e:
-        print(f"❌ Zamzar conversion error for {original_filename}: {e}")
-        return None, None
+# EMF conversion is now handled by utils.convert_emf_via_zamzar (see alttext_utils.py).
+# PNG saving to PNG_OUTPUT_FOLDER is done inline in worker_process below.
 
 def worker_process(
     docx_path,
@@ -298,12 +171,16 @@ def worker_process(
         suffix = Path(target).suffix.lower()
 
         if suffix == ".emf":
-            # EMF files: convert to PNG via Zamzar API
+            # EMF → PNG via Zamzar (centralized in alttext_utils)
             print(f"🔄 Converting EMF via Zamzar: {target}")
-            png_bytes, ps_bytes = convert_emf_via_zamzar(img_bytes, os.path.basename(target))
+            png_bytes = utils.convert_emf_via_zamzar(img_bytes, os.path.basename(target), ZAMZAR_API_KEY)
             if png_bytes:
                 img_bytes = png_bytes
-                print(f"✅ EMF converted to PNG via Zamzar")
+                # Save high-quality PNG to output folder
+                png_filename = Path(target).stem + ".png"
+                png_path = PNG_OUTPUT_FOLDER / png_filename
+                png_path.write_bytes(png_bytes)
+                print(f"✅ Saved PNG: {png_path}")
             else:
                 print(f"⚠️ Zamzar conversion failed, skipping {target}")
                 continue
