@@ -32,15 +32,15 @@ warnings.simplefilter("ignore", NotOpenSSLWarning)
 
 # Excel file that already has columns A–O filled
 INPUT_EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Test_Excel_AI_Euler_AI.xlsx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/BAIN_Mod1_HeadingsAdjusted_Tables_Audit_20260202_133648.xlsx"
 )
 
 # Optional: sheet name; if "", use active sheet
-SHEET_NAME = "v2"  # e.g. "Website Alt Text AI Output"
+SHEET_NAME = "BAIN Mod1 v2"  # e.g. "Website Alt Text AI Output"
 
 # Grade band & course topic are only used for the AI prompt context
 DEFAULT_GRADE_BAND = "6-8"
-COURSE_TOPIC = "Elementary Algebra"
+COURSE_TOPIC = "Foundational Math"
 
 # Abacus AI config
 ABACUS_API_KEY = os.getenv("ABACUS_API_KEY")

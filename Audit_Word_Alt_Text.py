@@ -1,10 +1,4 @@
 # Created Nov 24 to capture/audit the current Alt Text from DOCX files in preferred Excel format
-# Updated Nov 25 to use alttext_utils.py and helper folder
-# Updated Dec 10 to:
-#   • match Master Excel layout (A–X),
-#   • add Grade/Course configs,
-#   • align image selection/size behavior with AI pipeline script,
-#   • add Image Topic and Image Context using context snippet helpers.
 #
 # This script:
 # - Handles either a single DOCX or a folder of DOCX files
@@ -13,6 +7,8 @@
 # - Populates columns A–O; P–X are headers only for later use
 
 # to Fix - have file also run .emf images for user to know and fix
+# reuse page numbers and image topic from .xlsx for new audit file
+# also find .svg images and convert to .png
 
 import datetime
 from pathlib import Path
@@ -31,16 +27,16 @@ from helpers import alttext_utils as altutils
 # =========================
 # 👉 Add a FOLDER or FILE to search for DOCX files
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Small Test Word to AI"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 1"
 )
 
 # Where Excel audit files will be saved
 OUTPUT_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Small Test Word to AI"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 1"
 )
 
-GRADE_LEVEL = "12-14"  # e.g. "12-14" (Column H)
-COURSE_NAME = "Quantitative Reasoning"  # e.g. "MATH 1050 College Algebra" (Column I)
+GRADE_LEVEL = "10-14"  # e.g. "12-14" (Column H)
+COURSE_NAME = "College Algebra"  # e.g. "College Algebra" (Column I)
 
 def process_single_docx(docx_path: Path, output_folder: Path):
     print(f"\n📄 Processing: {docx_path.name}")

@@ -1,13 +1,14 @@
-# THE PURPOSE OF THIS SCRIPT IS TO Build Alt Text Pipeline: DOCX → Images → Abacus (multi-threaded) → Rich Excel ===
+# THE PURPOSE OF THIS SCRIPT IS TO Build Alt Text Pipeline: DOCX → Images → Zamzar (.EMF) → Abacus (multi-threaded) → Rich Excel ===
+# Provides a single Excel file with all the Alt Text data.
 
 # NOTES BEFORE RUNNING:
-# 1. SET API KEY CONFIGURATIONS - BuildAPIVisionKey
+# 1. SET API KEY CONFIGURATIONS - BuildAPIVisionKey for both Zamzar and Abacus
 # 2. REVIEW FOLDER, OUTPUT FILE NAME AND VISION MODEL
 
 # Brenda Gardner — Created Nov 4 2025
-# Dec 10 @12:20 - Updated column layout A–X per new Master File
-
-#to fix:  make date sortable - copy from PushAltText_Excel_toWord.py
+# updated Feb 17 to use Zamzar API for EMF to PNG conversion
+# Updated Feb 18 to add converted images to a sub folder specified, put figure numer in column J and fixed page numbers
+# Updated Feb 19 to input "Ex*.*.*" in Column J for example figures, added output folder for images
 
 import os
 import re
@@ -39,18 +40,34 @@ from lxml import etree
 #   • a folder containing .docx files, OR
 #   • a single .docx file
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/2023 Textbook/Cryptography_6_images.docx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/BAIN_Mod4_Accessible_Lecture Notes.docx"
 )
-OUTPUT_EXCEL_PREFIX = "103x_Cryptography_AI"
-DEFAULT_GRADE_BAND = "12-14"
-COURSE_TOPIC = "Quantitative Reasoning"
+OUTPUT_EXCEL_PREFIX = "0920_BAIN_Mod4_AltText"
+OUTPUT_EXCEL_PATH = Path(f"{OUTPUT_EXCEL_PREFIX}.xlsx")
+OUTPUT_WORD_PATH = Path(f"{OUTPUT_EXCEL_PREFIX}.docx")
+DEFAULT_GRADE_BAND = "6-8"
+COURSE_TOPIC = "Foundational Math"
 
-# Optional to configure.
+# PS file output folder
+#PS_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/OER Trigonometry Textbook 2023/Module 1/Sections 1.2-1.6/Sections 1.2-1.6 Files")
+#PS_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# PNG file output folder (High Quality for Web)
+PNG_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/920 Images/Module 4 Images")
+PNG_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# API KEYS
+ZAMZAR_API_KEY = os.getenv('ZAMZAR')
+if not ZAMZAR_API_KEY:
+    print("⚠️ Warning: ZAMZAR API key not found. EMF conversion will be skipped.")
+
+ZAMZAR_BASE_URL = "https://api.zamzar.com"
+ZAMZAR_JOBS_URL = f"{ZAMZAR_BASE_URL}/v1/jobs"
+
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
-
 ABACUS_API_KEY = os.getenv("ABACUS_API_KEY")
 ROUTE_LLM_ENDPOINT = "https://routellm.abacus.ai/v1/chat/completions"
-VISION_MODEL = "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
+VISION_MODEL = "route-llm" #meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8 is cheapest
 MAX_THREADS = 3
 API_TIMEOUT_SEC = 180
 
@@ -107,20 +124,148 @@ def call_abacus(img_bytes: bytes, prompt: str) -> Dict[str, str]:
     return js
 
 
+def convert_emf_via_zamzar(img_bytes: bytes, original_filename: str) -> Tuple[bytes, bytes]:
+    """
+    """
+    # Convert EMF to High-Quality PNG using Zamzar API.
+    # Saves the PNG to PNG_OUTPUT_FOLDER.
+    """
+    Convert EMF to PNG using Zamzar API.
+    (.ps conversion is currently commented out to save credits)
+    Returns: (png_bytes, None) or (None, None) on failure
+    """
+    if not ZAMZAR_API_KEY:
+        print("⚠️ Skipping Zamzar conversion: no API key")
+        return None, None
+
+    try:
+        # Step 1: Upload EMF and request conversion to PNG with High DPI
+        files = {'source_file': (original_filename, BytesIO(img_bytes), 'image/x-emf')}
+
+        # Added export_options for high quality (300 DPI)
+        data = {
+            'target_format': 'png',
+            'export_options': 'dpi=300'
+        }
+
+        response = requests.post(
+            ZAMZAR_JOBS_URL,
+            auth=(ZAMZAR_API_KEY, ''),
+            files=files,
+            data=data,
+            timeout=60
+        )
+        response.raise_for_status()
+        job_png = response.json()
+        job_id_png = job_png['id']
+
+        # --- PS CONVERSION OPTION (DISABLED TO SAVE CREDITS) ---
+        # Step 2: Upload EMF and request conversion to PS
+        # files = {'source_file': (original_filename, BytesIO(img_bytes), 'image/x-emf')}
+        # data = {'target_format': 'ps'}
+        # response = requests.post(
+        #     ZAMZAR_JOBS_URL,
+        #     auth=(ZAMZAR_API_KEY, ''),
+        #     files=files,
+        #     data=data,
+        #     timeout=60
+        # )
+        # response.raise_for_status()
+        # job_ps = response.json()
+        # job_id_ps = job_ps['id']
+        # -------------------------------------------------------
+
+        # Step 3: Poll for PNG completion
+        png_bytes = None
+        for _ in range(30):
+            status_response = requests.get(
+                f"{ZAMZAR_BASE_URL}/v1/jobs/{job_id_png}",
+                auth=(ZAMZAR_API_KEY, ''),
+                timeout=30
+            )
+            status_response.raise_for_status()
+            status = status_response.json()
+
+            if status['status'] == 'successful':
+                file_id = status['target_files'][0]['id']
+                download_response = requests.get(
+                    f"{ZAMZAR_BASE_URL}/v1/files/{file_id}/content",
+                    auth=(ZAMZAR_API_KEY, ''),
+                    timeout=60
+                )
+                download_response.raise_for_status()
+                png_bytes = download_response.content
+
+                # --- NEW: Save High-Quality PNG to Folder ---
+                png_filename = Path(original_filename).stem + ".png"
+                png_path = PNG_OUTPUT_FOLDER / png_filename
+                with open(png_path, 'wb') as f:
+                    f.write(png_bytes)
+                print(f"✅ Saved High-Quality PNG: {png_path}")
+                # --------------------------------------------
+                break
+
+            elif status['status'] == 'failed':
+                print(f"❌ Zamzar PNG conversion failed for {original_filename}")
+                break
+
+            import time
+            time.sleep(10)
+
+        # --- PS POLLING OPTION (DISABLED TO SAVE CREDITS) ---
+        # ps_bytes = None
+        # for _ in range(30):
+        #     status_response = requests.get(
+        #         f"{ZAMZAR_BASE_URL}/v1/jobs/{job_id_ps}",
+        #         auth=(ZAMZAR_API_KEY, ''),
+        #         timeout=30
+        #     )
+        #     status_response.raise_for_status()
+        #     status = status_response.json()
+        #     if status['status'] == 'successful':
+        #         file_id = status['target_files'][0]['id']
+        #         download_response = requests.get(
+        #             f"{ZAMZAR_BASE_URL}/v1/files/{file_id}/content",
+        #             auth=(ZAMZAR_API_KEY, ''),
+        #             timeout=60
+        #         )
+        #         download_response.raise_for_status()
+        #         ps_bytes = download_response.content
+        #         ps_filename = Path(original_filename).stem + ".ps"
+        #         ps_path = PS_OUTPUT_FOLDER / ps_filename
+        #         with open(ps_path, 'wb') as f:
+        #             f.write(ps_bytes)
+        #         print(f"✅ Saved PS file: {ps_path}")
+        #         break
+        #     elif status['status'] == 'failed':
+        #         print(f"❌ Zamzar PS conversion failed for {original_filename}")
+        #         break
+        #     import time
+        #     time.sleep(10)
+        # -------------------------------------------------------
+
+        return png_bytes, None # Returning None for ps_bytes since it's disabled
+
+    except Exception as e:
+        print(f"❌ Zamzar conversion error for {original_filename}: {e}")
+        return None, None
+
 def worker_process(
-    docx_path: Path,
+    docx_path,
     paragraphs,
-    paragraph_texts: List[str],
-    rid_para_map: Dict[str, List[int]],
-    pic_id_map: Dict[str, str],
-    alt_map: Dict[str, str],
-    rels: Dict[str, str],
-    docpr_map: Dict[str, Dict[str, str]],
-    grade_band: str,
-    course_topic: str,
-    doc_author: str,
-) -> List[Dict[str, Union[str, int]]]:
-    rows: List[Dict[str, Union[str, int]]] = []
+    paragraph_texts,
+    rid_para_map,
+    pic_id_map,
+    alt_map,
+    rels,
+    docpr_map,
+    grade_band,
+    course_topic,
+    doc_author,
+    rid_page_map,
+    rid_figure_map,
+):
+    rows = []
 
     # Ensure we only call the API once per underlying media file
     seen_images = set()
@@ -151,21 +296,55 @@ def worker_process(
             continue
 
         suffix = Path(target).suffix.lower()
-        if suffix in (".emf", ".svg"):
-            converted = utils.convert_vector_to_png_bytes(
-                img_bytes, suffix, docx_path.parent
-            )
-            img_bytes = converted if converted else None
+
+        if suffix == ".emf":
+            # EMF files: convert to PNG via Zamzar API
+            print(f"🔄 Converting EMF via Zamzar: {target}")
+            png_bytes, ps_bytes = convert_emf_via_zamzar(img_bytes, os.path.basename(target))
+            if png_bytes:
+                img_bytes = png_bytes
+                print(f"✅ EMF converted to PNG via Zamzar")
+            else:
+                print(f"⚠️ Zamzar conversion failed, skipping {target}")
+                continue
+        elif suffix == ".svg":
+            # SVG files: convert to PNG via CairoSVG / LibreOffice
+            print(f"🔄 Converting SVG: {target}")
+            converted = utils.convert_vector_to_png_bytes(img_bytes, suffix, docx_path.parent)
+            if converted:
+                img_bytes = converted
+                print(f"✅ SVG converted to PNG")
+            else:
+                print(f"⚠️ SVG conversion failed, skipping {target}")
+                continue
+        elif suffix in (".wmf",):
+            # WMF: skip — low quality and rarely meaningful
+            print(f"⏭️ Skipping WMF file: {target}")
+            continue
+        elif suffix in (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".webp"):
+            # Standard raster formats: use as-is
+            print(f"📷 Processing raster image: {target}")
+        else:
+            print(f"⏭️ Skipping unsupported format: {target}")
+            continue
+
         if not img_bytes:
-            # print(f"Skipping {rid} -> {target}: conversion failed")
             continue
 
         # Use the *first* occurrence for context
         p_idx = para_indices[0]
 
         existing_alt = alt_map.get(rid, "").strip()
-        section = utils.extract_section_from_heading(paragraphs, p_idx)
-        page_num = utils.guess_page_number(p_idx)
+
+        # Figure label from the nearest Caption paragraph (forward-walk map)
+        figure_label = rid_figure_map.get(rid, "")
+        if not figure_label:
+            # Fallback: search backwards in the flat paragraph list
+            figure_label = utils.extract_figure_label_before_image(paragraphs, p_idx)
+
+        # Page number from lastRenderedPageBreak map (accurate per-image pages)
+        page_num = rid_page_map.get(rid, "")
+
         context = utils.build_context_snippet(paragraph_texts, p_idx, window=1)
         prompt = build_prompt(grade_band, course_topic, context)
 
@@ -194,8 +373,8 @@ def worker_process(
             "image_context": context,
             "grade_level": grade_band,
             "course_topic": course_topic,
-            "section": section,
-            "page_number": page_num or "",
+            "section": figure_label,
+            "page_number": page_num,  # Use header page number
             "doc_author": doc_author,
             "in_word": "Yes",
             "in_excel": "",
@@ -278,7 +457,9 @@ def main():
     for docx_path in docx_files:
         print(f"\n📄 Processing: {docx_path.name}")
         doc = Document(str(docx_path))
-        paragraphs = doc.paragraphs  # NEW
+
+        # NEW
+        paragraphs = doc.paragraphs
         paragraph_texts = utils.read_paragraph_texts(doc)
 
         # Doc author for this document
@@ -294,11 +475,18 @@ def main():
         rid_para_map = utils.locate_all_image_instances(doc)
         docpr_map = utils.extract_docpr_tags_with_rid(docx_path)
 
+        # Build per-image page number map (uses lastRenderedPageBreak)
+        rid_page_map   = utils.build_rid_page_map(docx_path)
+        # Build per-image figure label map (forward caption scan)
+        rid_figure_map = utils.build_rid_figure_map(docx_path)
+
         print("docpr_map keys:", list(docpr_map.keys()))
+        print("rid_page_map sample:", dict(list(rid_page_map.items())[:5]))
+        print("rid_figure_map sample:", dict(list(rid_figure_map.items())[:5]))
 
         rows = worker_process(
             docx_path=docx_path,
-            paragraphs=paragraphs,  # NEW
+            paragraphs=paragraphs,
             paragraph_texts=paragraph_texts,
             rid_para_map=rid_para_map,
             pic_id_map=pic_id_map,
@@ -308,6 +496,8 @@ def main():
             grade_band=DEFAULT_GRADE_BAND,
             course_topic=COURSE_TOPIC,
             doc_author=doc_author,
+            rid_page_map=rid_page_map,
+            rid_figure_map=rid_figure_map,
         )
 
         for loc_index, r in enumerate(rows, start=1):

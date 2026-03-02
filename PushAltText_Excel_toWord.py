@@ -1,4 +1,4 @@
-# This is a copy of Excel_to_Word_AltText.py with to support new columns in output file.
+# This is a newer verison of Excel_to_Word_AltText.py with to support new columns in output file.
 # Updated by Brenda Gardner on Dec 10, 2025 so output file matches Master file. Added helpers file to share code.
 # removed .wmf files in Word report, but kept .emf files in Excel file report
 
@@ -6,9 +6,8 @@
 # What this script does:
 # 1) Reads Excel (Picture ID, #Column T for alt text to apply)
 # 2) Opens DOCX, snapshots ORIGINAL alt text (pre-change)
-# 3) Reviews Word for other Equations that are not in Equation Editor
-# 4) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
-# 5) Builds a QA report with: original columns (no additional review)
+# 3) Applies Excel alt text by Picture ID (supports "N/A" and "Mark as Decorative")
+# 4) Builds a QA report with: original columns (no additional review)
 # Note: OUTPUT EXCEL FILE: Use Visual Basic script to put images in cell
 
 # to Fix:
@@ -41,11 +40,10 @@ from helpers import alttext_utils as utils
 # CONFIG — EDIT THESE
 # ====
 DOCX_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/2023 Textbook/Cryptography_8_images.docx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/BAIN_Mod4_Accessible_Lecture Notes.docx"
 )
-
 EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/Small Test Word to AI/103x_Cryptography_AltText_Apply.xlsx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/0920 Information/920 2025 Lecture Notes/0920_BAIN_Mod4_AltText_Copied to Bain_History.xlsx"
 )
 OUTPUT_DOCX  = DOCX_PATH.with_name(DOCX_PATH.stem + "_withAltText.docx")
 REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
@@ -53,11 +51,11 @@ REPORT_PATH  = DOCX_PATH.with_name(DOCX_PATH.stem + "_AltText_Report.xlsx")
 # Excel column mapping (letters).
 PICTURE_ID_COLUMN = column_index_from_string("C")  # Excel Picture ID
 ALT_TEXT_COLUMN   = column_index_from_string("T")  # Use Excel Suggested Alt Text ("T")
-FILE_NAME_COLUMN  = column_index_from_string("J")
-SECTION_COLUMN    = column_index_from_string("K")
-PAGE_NUMBER_COLUMN= column_index_from_string("L")
+FILE_NAME_COLUMN  = column_index_from_string("I")
+SECTION_COLUMN    = column_index_from_string("J")
+PAGE_NUMBER_COLUMN= column_index_from_string("K")
 NOTES_COLUMN      = column_index_from_string("V")
-TOPIC_COLUMN      = column_index_from_string("F")  # NEW: Image Topic in Excel column F
+TOPIC_COLUMN      = column_index_from_string("E")  # NEW: Image Topic in Excel column F
 
 # Thumbnails
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"  # adjust if needed

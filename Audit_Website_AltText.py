@@ -29,19 +29,25 @@ from helpers import alttext_utils as utils
 # CONFIG — EDIT THESE
 # =========================
 # These will be written into every row (can be left "" if you want to fill later).
-DEFAULT_GRADE_BAND = "12-14"       # e.g. "10–12"
-COURSE_TOPIC = "Quantitative Reasoning"      # e.g. "College Algebra"
-BOOK_SOURCE_NAME = "Lumen Hamiltonian Circuits"
+DEFAULT_GRADE_BAND = "12-24"       # e.g. "10–12"
+COURSE_TOPIC = "Graph Theory"      # e.g. "College Algebra"
+BOOK_SOURCE_NAME = "Math in Society"
 
 # Folder where the Excel output file will be written
 OUTPUT_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information"
 )
 
 # List of (URL, Section/Topic) pairs
 URLS_AND_TOPICS = [
-    ("https://courses.lumenlearning.com/slcc-mathforliberalartscorequisite/chapter/hamiltonian-circuits/",
-     "Hamiltonian Circuits"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.01:_Introduction" , "6.1: Introduction"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.02:_Graphs" , "6.2: Graphs"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.03:_Shortest_Path" , "6.3: Shortest Path"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.04:_Euler_Circuits_and_the_Chinese_Postman_Problem" , "6.4: Euler Circuits and the Chinese Postman Problem"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.05:_Eulerization_and_the_Chinese_Postman_Problem" , "6.5: Eulerization and the Chinese Postman Problem"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.06:_Hamiltonian_Circuits_and_the_Traveling_Salesman_Problem" , "6.6: Hamiltonian Circuits and the Traveling Salesman Problem"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.07:_Spanning_Trees" , "6.7: Spanning Trees"),
+("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.07:_Spanning_Trees" , "6.8: Exercise"),
 ]
 
 

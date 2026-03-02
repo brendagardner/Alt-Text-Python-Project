@@ -21,6 +21,15 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Alignment
 
+# Try to import cairosvg for SVG conversion - added feb 16
+try:
+    import cairosvg
+    HAS_CAIROSVG = True
+except ImportError:
+    HAS_CAIROSVG = False
+    print("⚠️  cairosvg not installed. SVG conversion will fall back to LibreOffice.")
+    print("   Install with: pip install cairosvg")
+
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
 TARGET_IMAGE_WIDTH_PX = 800
 ROW_HEIGHT_SCALE = 0.85
@@ -29,19 +38,21 @@ STYLE_GUIDE_RULES = STYLE_GUIDE_RULES = """
 You are an accessibility expert for STEM education. Generate alt text according to these rules:
 - Be accurate and concise. Do not reveal answers not explicitly shown.
 - Use math screen-reader conventions:
-• Negatives: say “negative three,” not “-3” unless the negative is in parentheses or ordered pair.
-• Fractions: say “three-fourths”, not “3/4.”
-• Intervals/inequalities: say “x is greater than or equal to three,” avoid symbols.
-• Exponents/Roots: “x squared,” “x cubed,” “x to the fourth power.”
-• Roots: “square root of,” “cube root of”, “f of x,” “g of x.”
-• Coordinate plane: Coordinate plane grid with both x-axis and y-axis from negative 10 to 10
-• Coordinates: "(-1,5)"
-• Axes: “x-axis,” “y-axis,” include units if shown.
-• Lines and slopes: say “increasing,” “decreasing,” “constant,” “positive slope,” “negative slope.”
+• Negatives: use “negative three,” not “-3”.
+• Fractions: use “three fourths”, not “3/4.” 
 • Fractions in expressions: “quantity a plus b over c,” when needed for clarity.
-• Functions: type if clear (linear, quadratic), key features if shown (intercepts, vertex, max/min, asymptotes).
+• Intervals/inequalities: use “x is greater than or equal to three,” avoid symbols.
+• Exponents: “x squared,” “x cubed,” “x to the fourth power” 
+• Roots: “square root of,” “cube root of”, "fourth root of x"
+• Functions: “f of x,” “g of x.”, not f(x) or g(x).  
+• Coordinate plane: Coordinate plane grid with both x-axis and y-axis from negative 10 to 10
+• Coordinates: "(negative 1,5)"
+• Axes: “x axis,” “y axis,” include units if shown.
+• Horizontal Number lines: Include tick marks and labels given.  
+• Lines and slopes: say “increasing,” “decreasing,” “constant,” “positive slope,” “negative slope.”
+• Graphs of Function: type if clear (linear, quadratic, cubic, rational, polynomial), key features if shown (intercepts, vertex, max/min, asymptotes).
 • Order of description: most critical to context, then left to right, bottom-up
-• Graphs and charts - include: what type (line graph, bar chart, scatter plot), axes names/units if visible, describe comparison or trend, not exact numbers unless the image highlights them.
+• Graphs and charts - include: what type (graph, bar chart, scatter plot), describe comparison or trend, not exact numbers unless the image highlights them.
 - Provide three variants per image:
   1) Short (<= 120 characters)
   2) Standard (<= 250 characters)
@@ -54,7 +65,7 @@ You are an accessibility expert for STEM education. Generate alt text according 
 - Do not include colors unless colors are mentioned in context.  
 - Do not use "an image of" and similar.
 - No need to include information also found in the image caption or image context (written just before or after the image). Do not guess about context not evident.  Note this in "AI notes" 
-- If there is a clear question in the context, ensure alt text can answer that question without noting answer. 
+- If there is a clear question in the surrounding context or text, ensure alt text can answer that question without noting answer. 
 
 Return ONLY a valid JSON object with these exact keys: short, standard, long, notes, topic
 - short, standard, and long are alt-text variants.
@@ -81,18 +92,235 @@ def safe_to_str(value):
         return json.dumps(value, ensure_ascii=False)
     return str(value)
 
+def map_paragraphs_to_sections(doc):
+    """
+    Returns a list mapping paragraph index -> section index.
+    Section breaks are stored in doc._body and doc._element.
+    """
+    para_to_section = []
+    current_section = 0
 
-def guess_page_number(paragraph_index: Union[int, None]) -> Union[int, None]:
-    if paragraph_index is None or paragraph_index < 0:
-        return None
-    return (paragraph_index // 20) + 1
+    for block in doc.element.body.iterchildren():
+        if block.tag.endswith("p"):
+            para_to_section.append(current_section)
+
+        # Detect section break
+        if block.tag.endswith("sectPr"):
+            current_section += 1
+
+    return para_to_section
+
+
+def extract_page_number_from_section_header(section) -> str:
+    """
+    LEGACY — kept for backward compatibility.
+    Extracts a cached page label like 'CA2-17' from a section header.
+    Note: this returns only the cached (last-saved) value for one page;
+    use build_rid_page_map() for accurate per-image page numbers.
+    """
+    header_text = " ".join(
+        ''.join(el.text or '' for el in p._element.iter(
+            '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t'
+        ))
+        for p in section.header.paragraphs
+    )
+    match = re.search(r'[A-Z]+\d*-\d+', header_text)
+    return match.group(0) if match else ""
+
+
+def get_full_paragraph_text(p_elem) -> str:
+    """
+    Return the complete visible text of a paragraph XML element,
+    including auto-numbered field results (SEQ, PAGE, etc.) stored
+    in <w:fldChar> structures that p.text / p.runs would miss.
+    Concatenates every <w:t> descendant in document order.
+    """
+    W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    return ''.join(el.text or '' for el in p_elem.iter(f'{{{W}}}t'))
+
+
+def extract_header_page_prefix(docx_path: Path) -> str:
+    """
+    Reads each header XML file and returns the text that appears
+    immediately before a PAGE field instruction (e.g. 'CA2-').
+    Falls back to '' if no such prefix is found.
+    """
+    W        = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    INSTR    = f"{{{W}}}instrText"
+    T_TAG    = f"{{{W}}}t"
+
+    with zipfile.ZipFile(docx_path, "r") as z:
+        header_files = [n for n in z.namelist()
+                        if re.match(r'word/header\d+\.xml', n)]
+        for hf in header_files:
+            root = etree.fromstring(z.read(hf))
+            last_text = ""
+            for el in root.iter():
+                if el.tag == T_TAG and el.text:
+                    last_text = el.text
+                elif el.tag == INSTR and el.text and 'PAGE' in el.text:
+                    candidate = last_text.strip()
+                    if candidate:
+                        return candidate
+    return ""
+
+
+def build_rid_page_map(docx_path: Path) -> Dict[str, str]:
+    """
+    Returns {rId: page_label} for every image in the document.
+
+    Uses <w:lastRenderedPageBreak> elements — positions Word recorded
+    during the last save — so the labels match what the document headers
+    actually display.  An image that spans a page break gets both labels,
+    e.g. 'CA2-04, CA2-05'.
+    """
+    W      = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    BLIP   = "{http://schemas.openxmlformats.org/drawingml/2006/main}blip"
+    R_NS   = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    LRPB   = f"{{{W}}}lastRenderedPageBreak"
+
+    with zipfile.ZipFile(docx_path, "r") as z:
+        root = etree.fromstring(z.read("word/document.xml"))
+
+    body = root.find(f"{{{W}}}body")
+
+    # Starting page number from sectPr/pgNumType
+    pg_num = 1
+    sect = root.find(f".//{{{W}}}sectPr")
+    if sect is not None:
+        pgnt = sect.find(f"{{{W}}}pgNumType")
+        if pgnt is not None:
+            start = pgnt.get(f"{{{W}}}start", "")
+            if start.isdigit():
+                pg_num = int(start)
+
+    # Page label prefix from header (e.g. "CA2-")
+    prefix = extract_header_page_prefix(docx_path)
+
+    # Walk body children; for each descendant track LRPB then blip
+    rid_pages: Dict[str, set] = {}
+
+    for body_el in body:
+        for desc in body_el.iter():
+            if desc.tag == LRPB:
+                pg_num += 1
+            elif desc.tag == BLIP:
+                rid = desc.get(f"{{{R_NS}}}embed", "")
+                if rid:
+                    rid_pages.setdefault(rid, set()).add(pg_num)
+
+    def _fmt(pages: set) -> str:
+        sorted_pg = sorted(pages)
+        if prefix:
+            return ", ".join(f"{prefix}{p:02d}" for p in sorted_pg)
+        return ", ".join(str(p) for p in sorted_pg)
+
+    return {rid: _fmt(pages) for rid, pages in rid_pages.items()}
+
+
+def build_rid_figure_map(docx_path: Path) -> Dict[str, str]:
+    """
+    Returns {rId: figure_label} for every image in the document.
+
+    Walks the document body in forward (reading) order.  The most
+    recently seen Caption-style paragraph's label is assigned to the
+    next image blip encountered.  Works for both standalone images and
+    images inside tables (where captions live in adjacent cells).
+
+    Example outputs: '2.1.1', '2.1.4, 2.1.5'
+    """
+    W      = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    BLIP   = "{http://schemas.openxmlformats.org/drawingml/2006/main}blip"
+    R_NS   = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    with zipfile.ZipFile(docx_path, "r") as z:
+        root = etree.fromstring(z.read("word/document.xml"))
+
+    body = root.find(f"{{{W}}}body")
+
+    rid_labels: Dict[str, list] = {}
+    pending_caption = [""]   # use list so nested function can mutate it
+
+    def _parse_caption(p_elem) -> str:
+        """Extract clean figure number from a Caption paragraph element."""
+        full = get_full_paragraph_text(p_elem).strip()
+        m = re.search(r'Figure\s+([A-Za-z]*\d+\.\d+\.?\s*\d*)', full, re.IGNORECASE)
+        if not m:
+            return ""
+        raw = m.group(1).strip()
+        raw = re.sub(r'\.\s+', '.', raw)   # "2.1. 1" -> "2.1.1"
+        raw = re.sub(r'\s+', '', raw)       # remove remaining spaces
+        raw = raw.rstrip('.')               # "2.1." -> "2.1"
+        return raw
+
+    def _is_caption_style(p_elem) -> bool:
+        ppr = p_elem.find(f"{{{W}}}pPr")
+        if ppr is None:
+            return False
+        ps = ppr.find(f"{{{W}}}pStyle")
+        if ps is None:
+            return False
+        return ps.get(f"{{{W}}}val", "") == "Caption"
+
+    def _walk(el):
+        tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
+        if tag == 'p':
+            if _is_caption_style(el):
+                lbl = _parse_caption(el)
+                if lbl:
+                    pending_caption[0] = lbl
+            for blip in el.iter(BLIP):
+                rid = blip.get(f"{{{R_NS}}}embed", "")
+                if rid and pending_caption[0]:
+                    lst = rid_labels.setdefault(rid, [])
+                    if pending_caption[0] not in lst:
+                        lst.append(pending_caption[0])
+        elif tag in ('tbl', 'tr', 'tc'):
+            for child in el:
+                _walk(child)
+
+    for body_el in body:
+        _walk(body_el)
+
+    return {rid: ", ".join(labels) for rid, labels in rid_labels.items()}
+
+
+def extract_figure_label_before_image(paragraphs, para_idx: int) -> str:
+    """
+    LEGACY fallback — use build_rid_figure_map() for new code.
+    Searches backwards from para_idx for a Caption paragraph and returns
+    its full label (including auto-numbered suffix captured via w:t).
+    Falls back to the section number from the nearest heading.
+    """
+    # --- STEP 1: Caption paragraph (search back up to 10 paragraphs) ---
+    search_range = max(0, para_idx - 10)
+    for i in range(para_idx, search_range - 1, -1):
+        p = paragraphs[i]
+        if p.style.name == 'Caption':
+            full_text = get_full_paragraph_text(p._element).strip()
+            m = re.search(r'Figure\s+([A-Za-z]*\d+\.\d+\.?\s*\d*)', full_text, re.IGNORECASE)
+            if m:
+                raw = m.group(1).strip()
+                raw = re.sub(r'\.\s+', '.', raw)
+                raw = re.sub(r'\s+', '', raw).rstrip('.')
+                return raw
+
+    # --- STEP 2: Fallback to nearest section number heading ---
+    for i in range(para_idx, -1, -1):
+        text = paragraphs[i].text.strip()
+        sec_match = re.search(r'^(\d+\.\d+)', text)
+        if sec_match:
+            return sec_match.group(1)
+
+    return ""
 
 
 def read_paragraph_texts(doc: Document) -> List[str]:
     return [p.text for p in doc.paragraphs]
 
 
-def extract_section_from_heading(paragraphs: List, p_idx: int) -> str:
+
+def extract_section_from_heading(paragraphs: List, p_idx: int) -> str: #fall back?
     if p_idx is None or p_idx < 0 or p_idx >= len(paragraphs):
         return ""
     for i in range(p_idx, -1, -1):
@@ -314,16 +542,35 @@ def load_image_bytes(docx_path: Path, target: str):
         return None
 
 
-def convert_vector_to_png_bytes(
-    input_bytes: bytes,
-    suffix: str,
-    temp_dir: Path,
-) -> Optional[bytes]:
-    temp_in = temp_dir / f"vector_input{suffix}"
-    png_path = temp_dir / (temp_in.stem + ".png")
+def convert_svg_to_png_bytes(svg_bytes: bytes) -> Optional[bytes]:
+    """
+    Convert SVG bytes to PNG using CairoSVG (pure Python, works great on macOS).
+    Falls back to None if conversion fails.
+    """
+    if not HAS_CAIROSVG:
+        print("⚠️  CairoSVG not available for SVG conversion")
+        return None
 
     try:
-        temp_in.write_bytes(input_bytes)
+        png_bytes = cairosvg.svg2png(bytestring=svg_bytes)
+        return png_bytes
+    except Exception as e:
+        print(f"⚠️  CairoSVG conversion failed: {e}")
+        return None
+
+
+def convert_emf_to_png_bytes_libreoffice(
+        emf_bytes: bytes,
+        temp_dir: Path,
+) -> Optional[bytes]:
+    """
+    Convert EMF to PNG using LibreOffice (still needed for EMF files).
+    """
+    temp_in = temp_dir / "vector_input.emf"
+    png_path = temp_dir / "vector_input.png"
+
+    try:
+        temp_in.write_bytes(emf_bytes)
 
         subprocess.run(
             [
@@ -338,13 +585,15 @@ def convert_vector_to_png_bytes(
             check=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            timeout=30,
         )
 
         if png_path.exists():
             return png_path.read_bytes()
         return None
 
-    except Exception:
+    except Exception as e:
+        print(f"⚠️  LibreOffice EMF conversion failed: {e}")
         return None
 
     finally:
@@ -354,6 +603,94 @@ def convert_vector_to_png_bytes(
                 p.unlink(missing_ok=True)
             except Exception:
                 pass
+
+
+def convert_svg_to_png_bytes(svg_bytes: bytes) -> Optional[bytes]:
+    """
+    Convert SVG bytes to PNG using CairoSVG (pure Python, works great on macOS).
+    Falls back to None if conversion fails.
+    """
+    if not HAS_CAIROSVG:
+        print("⚠️  CairoSVG not available for SVG conversion")
+        return None
+
+    try:
+        png_bytes = cairosvg.svg2png(bytestring=svg_bytes)
+        return png_bytes
+    except Exception as e:
+        print(f"⚠️  CairoSVG conversion failed: {e}")
+        return None
+
+
+def convert_emf_to_png_bytes_libreoffice(
+        emf_bytes: bytes,
+        temp_dir: Path,
+) -> Optional[bytes]:
+    """
+    Convert EMF to PNG using LibreOffice (still needed for EMF files).
+    """
+    temp_in = temp_dir / "vector_input.emf"
+    png_path = temp_dir / "vector_input.png"
+
+    try:
+        temp_in.write_bytes(emf_bytes)
+
+        subprocess.run(
+            [
+                LIBREOFFICE_PATH,
+                "--headless",
+                "--convert-to",
+                "png",
+                "--outdir",
+                str(temp_dir),
+                str(temp_in),
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+
+        if png_path.exists():
+            return png_path.read_bytes()
+        return None
+
+    except Exception as e:
+        print(f"⚠️  LibreOffice EMF conversion failed: {e}")
+        return None
+
+    finally:
+        # Best effort cleanup
+        for p in (temp_in, png_path):
+            try:
+                p.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+
+def convert_vector_to_png_bytes(
+        input_bytes: bytes,
+        suffix: str,
+        temp_dir: Path,
+) -> Optional[bytes]:
+    """
+    Convert vector images (SVG or EMF) to PNG.
+    """
+    suffix_lower = suffix.lower()
+
+    if suffix_lower == ".svg":
+        print(f"🔄 Converting SVG using CairoSVG...")
+        return convert_svg_to_png_bytes(input_bytes)
+
+    elif suffix_lower == ".emf":
+        # We now handle this via Zamzar in the main script to get .PS and .PNG
+        # This remains as a fallback if Zamzar isn't used
+        print(f"🔄 Converting EMF using LibreOffice fallback...")
+        return convert_emf_to_png_bytes_libreoffice(input_bytes, temp_dir)
+
+    else:
+        print(f"⚠️  Unknown vector format: {suffix}")
+        return None
 
 
 def resize_png(png_bytes: bytes) -> Tuple[bytes, Tuple[int, int]]:
