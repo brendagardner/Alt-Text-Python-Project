@@ -27,16 +27,19 @@ from helpers import alttext_utils as altutils
 # =========================
 # 👉 Add a FOLDER or FILE to search for DOCX files
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 1"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/103x James' Textbook"
 )
 
 # Where Excel audit files will be saved
 OUTPUT_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 1"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/103x Information/103x James' Textbook"
 )
 
-GRADE_LEVEL = "10-14"  # e.g. "12-14" (Column H)
-COURSE_NAME = "College Algebra"  # e.g. "College Algebra" (Column I)
+GRADE_LEVEL    = "12-14"           # e.g. "12-14" (Column H)
+COURSE_NAME    = "Quantitative Reasoning"  # e.g. "College Algebra" (Column I)
+ZAMZAR_API_KEY = None              # set to os.getenv("ZAMZAR") if you want
+                                   # high-quality EMF→PNG via Zamzar;
+                                   # leave None to skip EMF thumbnails
 
 def process_single_docx(docx_path: Path, output_folder: Path):
     print(f"\n📄 Processing: {docx_path.name}")
@@ -47,10 +50,15 @@ def process_single_docx(docx_path: Path, output_folder: Path):
     # Used for building context snippets (like AI script)
     paragraph_texts = altutils.read_paragraph_texts(doc)
 
-    alt_map = altutils.parse_alt_text(docx_path)
-    rels = altutils.parse_relationships(docx_path)
+    alt_map      = altutils.parse_alt_text(docx_path)
+    rels         = altutils.parse_relationships(docx_path)
     rid_para_map = altutils.locate_all_image_instances(doc)
-    docpr_map = altutils.extract_docpr_tags_with_rid(docx_path)
+    docpr_map    = altutils.extract_docpr_tags_with_rid(docx_path)
+
+    # Page numbers from lastRenderedPageBreak (accurate per-image pages)
+    rid_page_map   = altutils.build_rid_page_map(docx_path)
+    # Figure labels from Caption-style paragraphs (forward-walk map)
+    rid_figure_map = altutils.build_rid_figure_map(docx_path)
 
     print(f"  rels (images) found: {len(rels)}")
     print(f"  alt_map entries: {len(alt_map)}")
@@ -125,11 +133,18 @@ def process_single_docx(docx_path: Path, output_folder: Path):
 
         suffix = Path(target).suffix.lower()
 
-        # ✅ Convert .emf / .svg to PNG for consistent handling
+        # WMF: skip — low quality and rarely meaningful
+        if suffix == ".wmf":
+            print(f"  ⏭️  Skipping WMF file: {target}")
+            continue
+
+        # EMF / SVG: convert to PNG for thumbnail display
         if suffix in (".emf", ".svg"):
             converted = altutils.convert_vector_to_png_bytes(
-                img_bytes, suffix, docx_path.parent
+                img_bytes, suffix, docx_path.parent, ZAMZAR_API_KEY
             )
+            if not converted:
+                print(f"  ⚠️  Could not convert {Path(target).name} to PNG — no thumbnail.")
             img_bytes = converted if converted else None
 
         if not img_bytes:
@@ -139,17 +154,11 @@ def process_single_docx(docx_path: Path, output_folder: Path):
         p_idx = para_indices[0]
         existing_alt = alt_map.get(rid, "").strip()
 
-        # --- Build context snippet + topic (no API call) ---
+        # --- Build context snippet (no API call in this audit script) ---
         context = altutils.build_context_snippet(paragraph_texts, p_idx, window=1)
+        # Image topic is left blank here; it gets populated by WORD_to_AI.py
+        # when the AI pipeline runs.
         topic = ""
-        try:
-            # Prefer topic from alt text if present; fall back to context
-            if existing_alt:
-                topic = altutils.extract_topic_from_altTexts(existing_alt) or ""
-            if not topic:
-                topic = altutils.extract_topic_from_altTexts(context) or ""
-        except Exception:
-            topic = ""
 
         # Thumbnail from image bytes (thumb_bytes, thumb_size)
         thumb_bytes = None
@@ -219,18 +228,15 @@ def process_single_docx(docx_path: Path, output_folder: Path):
         j_cell.style = "Hyperlink"
 
         # Column K (Section/Module)
-        ws.cell(
-            row=row,
-            column=11,
-            value=altutils.extract_section_from_heading(paragraphs, p_idx),
-        )
+        # Prefer the figure label from Caption-style paragraphs (forward-walk
+        # map); fall back to the nearest heading if no caption is found.
+        figure_label = rid_figure_map.get(rid, "")
+        if not figure_label:
+            figure_label = altutils.extract_section_from_heading(paragraphs, p_idx)
+        ws.cell(row=row, column=11, value=figure_label)
 
-        # Column L (Page #)
-        ws.cell(
-            row=row,
-            column=12,
-            value=altutils.guess_page_number(p_idx),
-        )
+        # Column L (Page #) — from lastRenderedPageBreak map
+        ws.cell(row=row, column=12, value=rid_page_map.get(rid, ""))
 
         # Column M (Document Author, if known)
         ws.cell(row=row, column=13, value=doc_author)
