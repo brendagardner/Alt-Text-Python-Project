@@ -1,19 +1,23 @@
+# PushAltText_Excel_to_MultipleWord.py
+#
 # Applies alt text from a SINGLE Excel file to MULTIPLE Word documents.
 # Uses Column I (source file name) to group Excel rows by document,
-# and matches images by Picture ID (Column C) — Primary Key in Excel.
+# and matches images by Picture ID (Column C) — confirmed 100% reliable.
 #
 # Created by Brenda Gardner, March 2026
 #
 # HOW IT WORKS:
 #   1. Reads the Excel file and groups rows by source file name (Column I)
-#   2. Scans WORD_FOLDER for all .docx files
-#   3. Uses NAME_MAPPING to connect Excel source names to actual Word filenames
-#   4. For each matched Word doc: applies alt text by Picture ID, saves output
-#   5. For unmatched Word docs with images: reports "No Alt Text in Excel File"
-#   6. For unmatched Word docs with NO images: skips silently
-#   7. Saves a consolidated QA report covering all documents
+#   2. Reads the PNG thumbnails already embedded in Column A of the Excel
+#      (much faster than re-extracting and converting from Word via LibreOffice)
+#   3. Scans WORD_FOLDER for all .docx files
+#   4. Uses NAME_MAPPING to connect Excel source names to actual Word filenames
+#   5. For each matched Word doc: applies alt text by Picture ID, saves output
+#   6. For unmatched Word docs with images: reports "No Alt Text in Excel File"
+#   7. For unmatched Word docs with NO images: skips silently
+#   8. Saves a consolidated QA report covering all documents
 #
-# MANUALLY REVIEW:
+# TO CUSTOMIZE FOR FUTURE USE:
 #   - Edit the paths in CONFIG
 #   - Update NAME_MAPPING when file names change (see instructions there)
 
@@ -39,18 +43,23 @@ from docx import Document
 
 # Import shared utilities (alttext_utils.py must be in the same folder)
 sys.path.insert(0, str(Path(__file__).parent))
-from helpers import alttext_utils as utils
+import alttext_utils as utils
+
 
 # ====================================================================
 # CONFIG — EDIT THIS SECTION BEFORE RUNNING
 # ====================================================================
 
 EXCEL_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Shared Alt Text Files/1060 Alt Text Files/1060_Mod1_AltText_REVIEW.xlsx"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/"
+    "Sabbatical Files - Personal (Unshared)/1060 Trigonometry/"
+    "2026 Trigonometry Chap 1, pre-alt text/1060_Mod1_AltText_REVIEW.xlsx"
 )
 
 WORD_FOLDER = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/2026 Trigonometry Chap 1, pre-alt text"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/"
+    "Sabbatical Files - Personal (Unshared)/1060 Trigonometry/"
+    "2026 Trigonometry Chap 1, pre-alt text"
 )
 
 # Output folder for Word docs with alt text applied (created automatically)
@@ -60,8 +69,8 @@ OUTPUT_FOLDER = WORD_FOLDER / "with_alt_text"
 REPORT_PATH = WORD_FOLDER / "1060_Mod1_AltText_QA_Report.xlsx"
 
 # ── NAME MAPPING ──────────────────────────────────────────────────────────────
-# This table connects the ORIGINAL source file names listed in Excel Column I
-# to the ACTUAL/NEW Word document filenames in WORD_FOLDER.
+# This table connects the source file names listed in Excel Column I
+# to the ACTUAL Word document filenames in WORD_FOLDER.
 #
 # Left side  = exactly as it appears in Column I of the Excel file
 # Right side = the actual filename in the Word folder
@@ -304,39 +313,89 @@ def apply_alt_text_to_doc(docx_path: Path, alt_by_pid: dict, output_path: Path):
     return word_action_log, dict(original_alt_text_map), word_images, filename_to_pids
 
 
-def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, tmp_dir: Path):
-    """Extract an image from inside a DOCX and embed it as a thumbnail in Excel."""
+def build_excel_image_map(excel_path: Path, picture_id_col: int, file_name_col: int) -> dict:
+    """
+    Extract the PNG thumbnails already embedded in Column A of the Excel file.
+    Returns {(excel_source_name, picture_id): png_bytes}.
+
+    The Excel uses Microsoft's "rich data" in-cell image format.  Each cell in
+    column A carries a 'vm' attribute that points through a metadata chain to
+    the actual PNG file stored inside the Excel zip.  The confirmed mapping is:
+        vm=N  →  xl/media/image{N+1}.png
+    A fallback of xl/media/image{row_number}.png is used if the vm lookup fails.
+
+    Using these pre-existing PNGs is far faster than extracting images from Word
+    and running LibreOffice to convert EMF/WMF files.
+    """
+    result = {}
+
+    with zipfile.ZipFile(excel_path) as z:
+        media_files = set(z.namelist())
+
+        # ── Step 1: parse sheet1.xml to get row → image path via 'vm' attribute ──
+        row_to_imgpath = {}
+        try:
+            sheet_xml = z.read("xl/worksheets/sheet1.xml")
+            sheet_root = etree.fromstring(sheet_xml)
+            for c_el in sheet_root.iter():
+                tag = c_el.tag.split("}")[-1] if "}" in c_el.tag else c_el.tag
+                if tag == "c":
+                    ref    = c_el.get("r", "")
+                    vm_str = c_el.get("vm")
+                    if ref.startswith("A") and vm_str:
+                        try:
+                            row_num  = int(ref[1:])
+                            vm_idx   = int(vm_str)
+                            # Confirmed pattern: vm=1 → image2.png (vm + 1 = image number)
+                            img_path = f"xl/media/image{vm_idx + 1}.png"
+                            row_to_imgpath[row_num] = img_path
+                        except ValueError:
+                            pass
+        except Exception as e:
+            print(f"    ⚠ Could not parse sheet XML for image paths: {e}")
+
+        # ── Step 2: read Excel data to get (source_file, picture_id) per row ──
+        wb = openpyxl.load_workbook(excel_path, data_only=True)
+        ws_data = wb.active
+
+        found = 0
+        for row in ws_data.iter_rows(min_row=2):
+            row_num  = row[0].row
+            pid      = _norm_pid(row[picture_id_col - 1].value)
+            src_file = safe_str(row[file_name_col   - 1].value)
+            if not pid or not src_file:
+                continue
+
+            # vm-based path first; fall back to simple row-number pattern
+            img_path = row_to_imgpath.get(row_num, f"xl/media/image{row_num}.png")
+            if img_path in media_files:
+                result[(src_file, pid)] = z.read(img_path)
+                found += 1
+
+    print(f"    ✅ Loaded {found} PNG thumbnails from Excel (no LibreOffice needed)")
+    return result
+
+
+def insert_image_from_bytes(ws, png_bytes: bytes, row: int):
+    """
+    Insert pre-existing PNG bytes directly into Excel cell A{row}.
+    No conversion, no LibreOffice — just the bytes as-is.
+    """
     try:
-        img_bytes = utils.load_image_bytes(docx_path, f"media/{target_filename}")
-        if not img_bytes:
-            ws.cell(row=row, column=1, value=f"(missing: {target_filename})")
-            ws.row_dimensions[row].height = 50
-            return
-
-        suffix = Path(target_filename).suffix.lower()
-        if suffix in (".emf", ".wmf", ".svg"):
-            converted = utils.convert_vector_to_png_bytes(img_bytes, suffix, tmp_dir)
-            if converted:
-                img_bytes = converted
-            else:
-                ws.cell(row=row, column=1, value=f"(vector — not rendered: {target_filename})")
-                ws.row_dimensions[row].height = 80
-                return
-
         height = 0
         try:
-            pil_img = PILImage.open(BytesIO(img_bytes))
+            pil_img = PILImage.open(BytesIO(png_bytes))
             height  = pil_img.size[1]
         except Exception:
             pass
 
-        xl_img = XLImage(BytesIO(img_bytes))
+        xl_img = XLImage(BytesIO(png_bytes))
         ws.add_image(xl_img, f"A{row}")
         scale = getattr(utils, "ROW_HEIGHT_SCALE", 0.75)
         ws.row_dimensions[row].height = int(height * scale) if height else 80
 
     except Exception as e:
-        ws.cell(row=row, column=1, value=f"(error: {e})")
+        ws.cell(row=row, column=1, value=f"(error inserting image: {e})")
         ws.row_dimensions[row].height = 50
 
 
@@ -400,6 +459,11 @@ total_records = sum(len(v) for v in excel_groups.values())
 print(f"  ✅ Found {len(excel_groups)} source files, {total_records} total records")
 for src_name, recs in sorted(excel_groups.items()):
     print(f"     • {src_name}  ({len(recs)} images)")
+
+# Pre-load all PNG thumbnails from Column A of the Excel (fast — no LibreOffice)
+print(f"\n🖼 Extracting thumbnails from Excel Column A...")
+excel_image_map = build_excel_image_map(EXCEL_PATH, PICTURE_ID_COLUMN, FILE_NAME_COLUMN)
+# excel_image_map: {(excel_source_name, picture_id): png_bytes}
 
 
 # ====================================================================
@@ -581,121 +645,137 @@ def _sort_key(r):
 report_rows.sort(key=_sort_key)
 
 # ── Write report rows ─────────────────────────────────────────────────────────
-with tempfile.TemporaryDirectory() as tmp_dir:
-    tmp_dir = Path(tmp_dir)
+for row_num, row_data in enumerate(report_rows, start=2):
+    word_doc    = row_data["word_doc"]
+    img_fname   = row_data["image_filename"]
+    picture_id  = row_data["picture_id"]
+    status      = row_data["status"]
+    orig_alt    = row_data["original_alt"]
+    applied_alt = row_data["applied_alt"]
+    source_docx = row_data["source_docx"]
+    output_docx = row_data["output_docx"]
 
-    for row_num, row_data in enumerate(report_rows, start=2):
-        word_doc    = row_data["word_doc"]
-        img_fname   = row_data["image_filename"]
-        picture_id  = row_data["picture_id"]
-        status      = row_data["status"]
-        orig_alt    = row_data["original_alt"]
-        applied_alt = row_data["applied_alt"]
-        source_docx = row_data["source_docx"]
-        output_docx = row_data["output_docx"]
+    in_excel_label = (
+        "No — Alt Text Missing"
+        if status == "No Alt Text in Excel File"
+        else "Yes"
+    )
 
-        in_excel_label = (
-            "No — Alt Text Missing"
-            if status == "No Alt Text in Excel File"
-            else "Yes"
-        )
+    # ── A: Image thumbnail ────────────────────────────────────────────────
+    # Primary: use the PNG already embedded in the Excel file.
+    # This is instant and avoids any LibreOffice EMF conversion.
+    # Fallback: if the image wasn't in Excel (e.g. unmatched Word doc),
+    # try extracting a PNG directly from the Word doc — but only for
+    # native PNG/JPG images; skip EMF/WMF to avoid the slow conversion.
+    excel_src_name = reverse_mapping.get(word_doc, row_data.get("file_name", ""))
+    png_bytes = excel_image_map.get((excel_src_name, picture_id))
 
-        # A: Image thumbnail (use output doc if it exists, else source)
+    if png_bytes:
+        insert_image_from_bytes(ws, png_bytes, row_num)
+    else:
+        # Fallback: try to pull directly from the Word doc (PNG/JPG only)
         thumb_docx = (
             output_docx if (output_docx and output_docx.exists()) else source_docx
         )
+        fallback_written = False
         if thumb_docx and thumb_docx.exists():
-            try:
-                insert_image_from_docx(ws, thumb_docx, img_fname, row_num, tmp_dir)
-            except Exception as e:
-                ws.cell(row=row_num, column=1, value=f"(no thumbnail: {e})")
-                ws.row_dimensions[row_num].height = 50
-        else:
-            ws.cell(row=row_num, column=1, value="(source file not found)")
+            suffix = Path(img_fname).suffix.lower()
+            if suffix not in (".emf", ".wmf"):   # skip slow vector formats
+                try:
+                    fb_bytes = utils.load_image_bytes(thumb_docx, f"media/{img_fname}")
+                    if fb_bytes:
+                        insert_image_from_bytes(ws, fb_bytes, row_num)
+                        fallback_written = True
+                except Exception:
+                    pass
+        if not fallback_written:
+            ws.cell(row=row_num, column=1,
+                    value="(vector image — see Word doc)" if Path(img_fname).suffix.lower()
+                          in (".emf", ".wmf") else "(thumbnail not available)")
             ws.row_dimensions[row_num].height = 50
 
-        ws.cell(row=row_num, column=2,  value=word_doc)
-        ws.cell(row=row_num, column=3,  value=img_fname)
-        ws.cell(row=row_num, column=4,  value=picture_id)
-        ws.cell(row=row_num, column=5,  value=in_excel_label)
-        ws.cell(row=row_num, column=6,  value=row_data["file_name"])
-        ws.cell(row=row_num, column=7,  value=row_data["topic"])
-        ws.cell(row=row_num, column=8,  value=row_data["section"])
-        ws.cell(row=row_num, column=9,  value=row_data["page_number"])
+    ws.cell(row=row_num, column=2,  value=word_doc)
+    ws.cell(row=row_num, column=3,  value=img_fname)
+    ws.cell(row=row_num, column=4,  value=picture_id)
+    ws.cell(row=row_num, column=5,  value=in_excel_label)
+    ws.cell(row=row_num, column=6,  value=row_data["file_name"])
+    ws.cell(row=row_num, column=7,  value=row_data["topic"])
+    ws.cell(row=row_num, column=8,  value=row_data["section"])
+    ws.cell(row=row_num, column=9,  value=row_data["page_number"])
 
-        c_orig = ws.cell(row=row_num, column=10, value=orig_alt)
-        c_orig.alignment = wrap_align
-        ws.cell(row=row_num, column=11, value=len(orig_alt) if orig_alt else 0)
+    c_orig = ws.cell(row=row_num, column=10, value=orig_alt)
+    c_orig.alignment = wrap_align
+    ws.cell(row=row_num, column=11, value=len(orig_alt) if orig_alt else 0)
 
-        c_appl = ws.cell(row=row_num, column=12, value=applied_alt)
-        c_appl.alignment = wrap_align
-        ws.cell(row=row_num, column=13, value=len(applied_alt) if applied_alt else 0)
+    c_appl = ws.cell(row=row_num, column=12, value=applied_alt)
+    c_appl.alignment = wrap_align
+    ws.cell(row=row_num, column=13, value=len(applied_alt) if applied_alt else 0)
 
-        ws.cell(row=row_num, column=14, value=row_data["notes"]).alignment = wrap_align
+    ws.cell(row=row_num, column=14, value=row_data["notes"]).alignment = wrap_align
 
-        # O: Status with color coding
-        s_cell = ws.cell(row=row_num, column=15, value=status)
-        if "OK" in status:
-            s_cell.font = Font(bold=True, color=GREEN_FONT)
-        elif status == "No Alt Text in Excel File":
-            s_cell.font = Font(bold=True, color=RED_FONT)
-        else:
-            s_cell.font = Font(bold=True, color=ORANGE_FONT)
+    # O: Status with color coding
+    s_cell = ws.cell(row=row_num, column=15, value=status)
+    if "OK" in status:
+        s_cell.font = Font(bold=True, color=GREEN_FONT)
+    elif status == "No Alt Text in Excel File":
+        s_cell.font = Font(bold=True, color=RED_FONT)
+    else:
+        s_cell.font = Font(bold=True, color=ORANGE_FONT)
 
-        date_cell = ws.cell(row=row_num, column=16, value=run_date)
-        date_cell.number_format = "mm-dd-yyyy"
-        # Column Q (Reviewer Notes) left blank for manual entry
+    date_cell = ws.cell(row=row_num, column=16, value=run_date)
+    date_cell.number_format = "mm-dd-yyyy"
+    # Column Q (Reviewer Notes) left blank for manual entry
 
-    # ── Summary sheet ─────────────────────────────────────────────────────────
-    sw = wb.create_sheet("Summary")
-    sw["A1"] = "Alt Text Application Summary"
-    sw["A1"].font = Font(bold=True, size=14)
+# ── Summary sheet ─────────────────────────────────────────────────────────────
+sw = wb.create_sheet("Summary")
+sw["A1"] = "Alt Text Application Summary"
+sw["A1"].font = Font(bold=True, size=14)
 
-    total_ok      = sum(1 for r in report_rows if "OK" in r["status"])
-    total_missing = sum(1 for r in report_rows if r["status"] == "No Alt Text in Excel File")
-    total_review  = sum(1 for r in report_rows
-                        if "OK" not in r["status"] and r["status"] != "No Alt Text in Excel File")
+total_ok      = sum(1 for r in report_rows if "OK" in r["status"])
+total_missing = sum(1 for r in report_rows if r["status"] == "No Alt Text in Excel File")
+total_review  = sum(1 for r in report_rows
+                    if "OK" not in r["status"] and r["status"] != "No Alt Text in Excel File")
 
-    sw["A3"] = "Total images in report"
-    sw["B3"] = len(report_rows)
-    sw["A4"] = "Alt text applied (OK)"
-    sw["B4"] = total_ok
-    sw["B4"].font = Font(color=GREEN_FONT, bold=True)
-    sw["A5"] = "Images missing Excel alt text"
-    sw["B5"] = total_missing
-    sw["B5"].font = Font(color=RED_FONT, bold=True)
-    sw["A6"] = "Needs review"
-    sw["B6"] = total_review
-    sw["B6"].font = Font(color=ORANGE_FONT, bold=True)
+sw["A3"] = "Total images in report"
+sw["B3"] = len(report_rows)
+sw["A4"] = "Alt text applied (OK)"
+sw["B4"] = total_ok
+sw["B4"].font = Font(color=GREEN_FONT, bold=True)
+sw["A5"] = "Images missing Excel alt text"
+sw["B5"] = total_missing
+sw["B5"].font = Font(color=RED_FONT, bold=True)
+sw["A6"] = "Needs review"
+sw["B6"] = total_review
+sw["B6"].font = Font(color=ORANGE_FONT, bold=True)
 
-    sw["A8"] = "Results by Word Document"
-    sw["A8"].font = Font(bold=True, size=12)
-    sw["B8"] = "Applied"
-    sw["C8"] = "Total Images"
-    sw["D8"] = "Missing Alt Text"
-    sw["A8"].font = sw["B8"].font = sw["C8"].font = sw["D8"].font = Font(bold=True)
+sw["A8"] = "Results by Word Document"
+sw["A8"].font = Font(bold=True, size=12)
+sw["B8"] = "Applied"
+sw["C8"] = "Total Images"
+sw["D8"] = "Missing Alt Text"
+sw["A8"].font = sw["B8"].font = sw["C8"].font = sw["D8"].font = Font(bold=True)
 
-    processed_docs = sorted(set(r["word_doc"] for r in report_rows))
-    for i, doc in enumerate(processed_docs, start=9):
-        sw.cell(row=i, column=1, value=doc)
-        doc_rows  = [r for r in report_rows if r["word_doc"] == doc]
-        ok_count  = sum(1 for r in doc_rows if "OK" in r["status"])
-        miss_count = sum(1 for r in doc_rows if r["status"] == "No Alt Text in Excel File")
-        sw.cell(row=i, column=2, value=ok_count).font = Font(color=GREEN_FONT)
-        sw.cell(row=i, column=3, value=len(doc_rows))
-        if miss_count:
-            mc = sw.cell(row=i, column=4, value=miss_count)
-            mc.font = Font(color=RED_FONT)
+processed_docs = sorted(set(r["word_doc"] for r in report_rows))
+for i, doc in enumerate(processed_docs, start=9):
+    sw.cell(row=i, column=1, value=doc)
+    doc_rows   = [r for r in report_rows if r["word_doc"] == doc]
+    ok_count   = sum(1 for r in doc_rows if "OK" in r["status"])
+    miss_count = sum(1 for r in doc_rows if r["status"] == "No Alt Text in Excel File")
+    sw.cell(row=i, column=2, value=ok_count).font = Font(color=GREEN_FONT)
+    sw.cell(row=i, column=3, value=len(doc_rows))
+    if miss_count:
+        mc = sw.cell(row=i, column=4, value=miss_count)
+        mc.font = Font(color=RED_FONT)
 
-    sw.column_dimensions["A"].width = 42
-    sw.column_dimensions["B"].width = 12
-    sw.column_dimensions["C"].width = 14
-    sw.column_dimensions["D"].width = 18
+sw.column_dimensions["A"].width = 42
+sw.column_dimensions["B"].width = 12
+sw.column_dimensions["C"].width = 14
+sw.column_dimensions["D"].width = 18
 
-    ws.auto_filter.ref = ws.dimensions
-    ws.freeze_panes    = "B2"
+ws.auto_filter.ref = ws.dimensions
+ws.freeze_panes    = "B2"
 
-    wb.save(REPORT_PATH)
+wb.save(REPORT_PATH)
 
 print(f"\n✅ QA report saved to:\n   {REPORT_PATH}")
 print(f"\n🎉 Done! Processed Word files saved to:\n   {OUTPUT_FOLDER}")

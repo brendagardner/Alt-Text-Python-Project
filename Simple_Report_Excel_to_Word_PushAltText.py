@@ -35,6 +35,7 @@ from lxml import etree
 from PIL import Image as PILImage
 
 from docx import Document  # NEW: for heading-based Section extraction
+from helpers import alttext_utils as utils
 
 # ====
 # CONFIG — EDIT THESE
@@ -59,7 +60,7 @@ NOTES_COLUMN      = column_index_from_string("V")
 TOPIC_COLUMN      = column_index_from_string("F")  # NEW: Image Topic in Excel column F
 
 # Thumbnails
-LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"  # adjust if needed
+ZAMZAR_API_KEY = os.getenv("ZAMZAR")   # set env var ZAMZAR=your_key; used for EMF→PNG
 IMAGE_WIDTH = 150  # px
 
 # ====
@@ -91,25 +92,6 @@ def load_image_bytes(docx_path: Path, target: str) -> Union[bytes, None]:
         print(f"⚠ Error reading {target}: {e}")
     return None
 
-def convert_vector_to_png_bytes(input_bytes: bytes, suffix: str, temp_dir: Path) -> Union[bytes, None]:
-    """Convert vector (EMF/WMF/SVG) to PNG via LibreOffice."""
-    temp_in = temp_dir / f"vector_input{suffix}"
-    temp_in.write_bytes(input_bytes)
-    try:
-        subprocess.run(
-            [LIBREOFFICE_PATH, "--headless", "--convert-to", "png", "--outdir", str(temp_dir), str(temp_in)],
-            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        png_path = temp_dir / (temp_in.stem + ".png")
-        if png_path.exists():
-            data = png_path.read_bytes()
-            png_path.unlink(missing_ok=True)
-            temp_in.unlink(missing_ok=True)
-            return data
-    except Exception as e:
-        print(f"⚠ LibreOffice conversion failed for {suffix}: {e}")
-    return None
-
 def resize_png(png_bytes: bytes, width: int = IMAGE_WIDTH) -> Tuple[bytes, int]:
     pil = PILImage.open(BytesIO(png_bytes))
     aspect = pil.height / pil.width if pil.width else 1.0
@@ -129,7 +111,7 @@ def insert_image_from_docx(ws, docx_path: Path, target_filename: str, row: int, 
 
         suffix = Path(target_filename).suffix.lower()
         if suffix in [".emf", ".wmf", ".svg"]:
-            converted = convert_vector_to_png_bytes(img_bytes, suffix, tmp_dir)
+            converted = utils.convert_vector_to_png_bytes(img_bytes, suffix, tmp_dir, ZAMZAR_API_KEY)
             if converted:
                 img_bytes = converted
             else:
