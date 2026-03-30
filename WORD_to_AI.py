@@ -6,8 +6,11 @@
 # 2. REVIEW FOLDER, OUTPUT FILE NAME AND VISION MODEL
 
 # Brenda Gardner — Created Nov 4 2025
-# updated Feb 17 to use Zamzar API for EMF to PNG conversion - Currently only doing .emf files - unblock rows around 270 to push all images through APIs
-# Updated Feb 18 to add converted images to a sub folder specified, put figure numer in column J and fix page number
+# updated Feb 17 to use Zamzar API for EMF to PNG conversion
+# Updated Feb 18 to add converted images to a sub folder specified, put figure numer in column J and fixed page number
+# If there is a figure number in the document before the image, it will show up in the Excel file.
+
+# To FIX - DUPLICATE IMAGES ARE NOT SHOWING UP
 
 import os
 import re
@@ -39,18 +42,18 @@ from lxml import etree
 #   • a folder containing .docx files, OR
 #   • a single .docx file
 INPUT_PATH = Path(
-    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 2/Exercises"
+    "/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/Chapter 4 Pre-Alt Text"
 )
-OUTPUT_EXCEL_PREFIX = "1050_Mod2_Exercises_EMF_Only"
-DEFAULT_GRADE_BAND = "10-14"
-COURSE_TOPIC = "College Algebra"
+OUTPUT_EXCEL_PREFIX = "1060_Mod5_AltText_REVIEW"
+DEFAULT_GRADE_BAND = "11-14"
+COURSE_TOPIC = "Trigonometry"
 
 # PS file output folder
 #PS_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/OER Trigonometry Textbook 2023/Module 1/Sections 1.2-1.6/Sections 1.2-1.6 Files")
 #PS_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # PNG file output folder (High Quality for Web)
-PNG_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1050 Information/1050 Sections/Module 2/Module 2 Images/Exercises Images")
+PNG_OUTPUT_FOLDER = Path("/Users/brendagardner/Library/CloudStorage/OneDrive-SaltLakeCommunityCollege/Sabbatical Files - Personal (Unshared)/1060 Information/Chapter 5 Pre-Alt Text/Module 5 Converted PNGs")
 PNG_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # API KEYS
@@ -296,32 +299,38 @@ def main():
     ws = wb.active
     ws.title = "Alt Text AI Output"
 
-    # === New headers A–X ===
+    # === Master headers A–AD (30 columns, standardized across all scripts) ===
     headers = [
-        "Image Thumbnail",                         # A
-        "Image Filename",                          # B
-        "Picture ID",                              # C
-        "Image Size",                              # D
-        "Image Topic",                             # E
-        "Image Context",                           # F
-        "Grade Level",                             # G
-        "Course Topic",                            # H
-        "File Name/Source",                        # I
-        "Section/Module",                          # J
-        "Page",                                    # K
-        "Doc Author",                              # L
-        "Current Alt Text",                        # M
-        "Current Alt Text Character Count",        # N
-        "Current Alt Text Notes",                  # O (blank)
-        "A.I. Short Alt Text",                     # P
-        "A.I. Med Alt Text",                       # Q
-        "A.I. Long Alt Text",                      # R
-        "A.I. Notes",                              # S
-        "Suggested Alt Text",                      # T (blank)
-        "Suggested Character Count",               # U (LEN(T))
-        "Suggested Alt Text Notes",                # V (blank)
-        "Reviewer Approved",                       # W (blank)
-        "Reviewer notes",                          # X (blank)
+        "Image Thumbnail",                         # A  (1)
+        "Image Filename",                          # B  (2)
+        "Picture ID",                              # C  (3)
+        "Image URL",                               # D  (4) — blank for Word sources
+        "Image Size",                              # E  (5)
+        "Image Topic",                             # F  (6)
+        "Image Context",                           # G  (7)
+        "Page #",                                  # H  (8)
+        "Section/Module/Figure #",                 # I  (9)
+        "Filename (Hyperlinked) or Webpage Name (URL)",  # J  (10)
+        "Grade Level",                             # K  (11)
+        "Course Name",                             # L  (12)
+        "Original Source Author",                  # M  (13)
+        "Copyright",                               # N  (14) — blank
+        "Date of Audit",                           # O  (15) — auto-filled
+        "Original Alt Text",                       # P  (16)
+        "Original Alt Text Character Count",       # Q  (17) — =LEN(P)
+        "Original Alt Text Notes",                 # R  (18) — blank
+        "A.I. Short Alt Text",                     # S  (19)
+        "A.I. Med Alt Text",                       # T  (20)
+        "A.I. Long Alt Text",                      # U  (21)
+        "A.I. Notes",                              # V  (22)
+        "New/Suggested Alt Text",                  # W  (23) — blank
+        "New/Suggested Alt Text Count",            # X  (24) — =LEN(W)
+        "New/Suggested Alt Text Notes",            # Y  (25) — blank
+        "Status - Alt Text Completed?\n(Original/Suggested/N)",  # Z  (26) — blank
+        "Reviewer Notes",                          # AA (27) — blank
+        "In Word?",                                # AB (28)
+        "In Excel?",                               # AC (29)
+        "Date of Completion",                      # AD (30) — blank
     ]
 
     for col, h in enumerate(headers, 1):
@@ -399,130 +408,159 @@ def main():
             else:
                 ws.cell(row=row, column=1, value="[No Thumbnail]")
 
-            # Column B: Image Filename
+            # Column B (2): Image Filename
             raw_name = r.get("image_name", "")
             clean_name = Path(raw_name).name  # strips any folder prefix
             ws.cell(row=row, column=2, value=clean_name)
 
-            # Column C: Picture ID
+            # Column C (3): Picture ID
             ws.cell(row=row, column=3, value=r.get("picture_id", ""))
 
-            # Column D: Image Size (e.g., "800 x 600")
-            size_str = f"{width} x {height}" if width and height else ""
-            ws.cell(row=row, column=4, value=size_str)
-
-            # Column E: Image Topic
-            ws.cell(row=row, column=5, value=r.get("image_topic", ""))
-
-            # Column F: Image Context (snippet used for prompt)
-            ws.cell(row=row, column=6, value=r.get("image_context", ""))
-
-            # Column G: Grade Level
-            ws.cell(row=row, column=7, value=r.get("grade_level", DEFAULT_GRADE_BAND))
-
-            # Column H: Course Topic
-            ws.cell(row=row, column=8, value=r.get("course_topic", COURSE_TOPIC))
-
-            # Column I: File Name/Source
-            ws.cell(row=row, column=9, value=r.get("file_name_source", ""))
-
-            # Column J: Section/Module
-            ws.cell(row=row, column=10, value=r.get("section", ""))
-
-            # Column K: Page
-            ws.cell(row=row, column=11, value=r.get("page_number", ""))
-
-            # Column L: Doc Author
-            ws.cell(row=row, column=12, value=r.get("doc_author", ""))
-
-            # Column M: Current Alt Text
-            current_alt = r.get("current_alt_text", "")
-            ws.cell(row=row, column=13, value=current_alt)
-
-            # Column N: Current Alt Text Character Count (formula LEN(Mrow))
-            ws.cell(row=row, column=14, value=f"=LEN(M{row})")
-
-            # Column O: Current Alt Text Notes (blank per spec)
+            # Column D (4): Image URL — blank for Word sources
             # (no value set)
 
-            # Column P: A.I. Short Alt Text
-            ws.cell(row=row, column=16, value=r.get("ai_short", ""))
+            # Column E (5): Image Size (e.g., "800 x 600")
+            size_str = f"{width} x {height}" if width and height else ""
+            ws.cell(row=row, column=5, value=size_str)
 
-            # Column Q: A.I. Med Alt Text
-            ws.cell(row=row, column=17, value=r.get("ai_standard", ""))
+            # Column F (6): Image Topic
+            ws.cell(row=row, column=6, value=r.get("image_topic", ""))
 
-            # Column R: A.I. Long Alt Text
-            ws.cell(row=row, column=18, value=r.get("ai_long", ""))
+            # Column G (7): Image Context (snippet used for prompt)
+            ws.cell(row=row, column=7, value=r.get("image_context", ""))
 
-            # Column S: A.I. Notes
-            ws.cell(row=row, column=19, value=r.get("ai_notes", ""))
+            # Column H (8): Page #
+            ws.cell(row=row, column=8, value=r.get("page_number", ""))
 
-            # Column T: Suggested Alt Text (blank per spec)
+            # Column I (9): Section/Module/Figure #
+            ws.cell(row=row, column=9, value=r.get("section", ""))
+
+            # Column J (10): Filename (Hyperlinked) or Webpage Name (URL)
+            # For Word sources: the source .docx filename (no hyperlink available at runtime)
+            ws.cell(row=row, column=10, value=r.get("file_name_source", ""))
+
+            # Column K (11): Grade Level
+            ws.cell(row=row, column=11, value=r.get("grade_level", DEFAULT_GRADE_BAND))
+
+            # Column L (12): Course Name
+            ws.cell(row=row, column=12, value=r.get("course_topic", COURSE_TOPIC))
+
+            # Column M (13): Original Source Author
+            ws.cell(row=row, column=13, value=r.get("doc_author", ""))
+
+            # Column N (14): Copyright — blank
+            # (no value set)
+
+            # Column O (15): Date of Audit — auto-filled with today's date
+            ws.cell(row=row, column=15, value=datetime.date.today().strftime("%m/%d/%Y"))
+
+            # Column P (16): Original Alt Text
+            current_alt = r.get("current_alt_text", "")
+            ws.cell(row=row, column=16, value=current_alt)
+
+            # Column Q (17): Original Alt Text Character Count — formula =LEN(P)
+            ws.cell(row=row, column=17, value=f"=LEN(P{row})")
+
+            # Column R (18): Original Alt Text Notes — blank
+            # (no value set)
+
+            # Column S (19): A.I. Short Alt Text
+            ws.cell(row=row, column=19, value=r.get("ai_short", ""))
+
+            # Column T (20): A.I. Med Alt Text
+            ws.cell(row=row, column=20, value=r.get("ai_standard", ""))
+
+            # Column U (21): A.I. Long Alt Text
+            ws.cell(row=row, column=21, value=r.get("ai_long", ""))
+
+            # Column V (22): A.I. Notes
+            ws.cell(row=row, column=22, value=r.get("ai_notes", ""))
+
+            # Column W (23): New/Suggested Alt Text — blank
             # (no initial value)
 
-            # Column U: Suggested Character Count (formula LEN(Trow))
-            ws.cell(row=row, column=21, value=f"=LEN(T{row})")
+            # Column X (24): New/Suggested Alt Text Count — formula =LEN(W)
+            ws.cell(row=row, column=24, value=f"=LEN(W{row})")
 
-            # Column V: Suggested Alt Text Notes (blank per spec)
-            # Column W: Reviewer Approved (blank per spec)
-            # Column X: Reviewer notes (blank per spec)
+            # Column Y (25): New/Suggested Alt Text Notes — blank
+            # Column Z (26): Status - Alt Text Completed? — blank
+            # Column AA (27): Reviewer Notes — blank
             # (no values set)
+
+            # Column AB (28): In Word?
+            ws.cell(row=row, column=28, value=r.get("in_word", "Yes"))
+
+            # Column AC (29): In Excel?
+            ws.cell(row=row, column=29, value=r.get("in_excel", ""))
+
+            # Column AD (30): Date of Completion — blank
+            # (no value set)
 
             row += 1
 
-    # === Column sizing & wrapping (similar to Website script) ===
+    # === Column sizing & wrapping (Master 29-column layout) ===
 
     # Make thumbnail column wide in pixels (converted to Excel width)
     ws.column_dimensions['A'].width = utils._pixels_to_column_width(600)
 
-    # Base widths for the rest (these are starting points; wrap_and_autofit can tweak)
-    ws.column_dimensions['B'].width = 30  # Image Filename
-    ws.column_dimensions['C'].width = 18  # Picture ID
-    ws.column_dimensions['D'].width = 14  # Image Size
-    ws.column_dimensions['E'].width = 25  # Image Topic
-    ws.column_dimensions['F'].width = 40  # Image Context
-    ws.column_dimensions['G'].width = 12  # Grade Level
-    ws.column_dimensions['H'].width = 20  # Course Topic
-    ws.column_dimensions['I'].width = 30  # File Name/Source
-    ws.column_dimensions['J'].width = 25  # Section/Module
-    ws.column_dimensions['K'].width = 8  # Page
-    ws.column_dimensions['L'].width = 20  # Doc Author
-    ws.column_dimensions['M'].width = 50  # Current Alt Text
-    ws.column_dimensions['N'].width = 16  # Current Alt Count
-    ws.column_dimensions['O'].width = 40  # Current Alt Notes
-    ws.column_dimensions['P'].width = 50  # AI Short
-    ws.column_dimensions['Q'].width = 50  # AI Med
-    ws.column_dimensions['R'].width = 50  # AI Long
-    ws.column_dimensions['S'].width = 40  # AI Notes
-    ws.column_dimensions['T'].width = 50  # Suggested Alt Text
-    ws.column_dimensions['U'].width = 18  # Suggested Count
-    ws.column_dimensions['V'].width = 40  # Suggested Notes
-    ws.column_dimensions['W'].width = 18  # Reviewer Approved
-    ws.column_dimensions['X'].width = 30  # Reviewer notes
+    # Base widths for all 30 columns
+    ws.column_dimensions['B'].width = 30   # Image Filename
+    ws.column_dimensions['C'].width = 18   # Picture ID
+    ws.column_dimensions['D'].width = 30   # Image URL
+    ws.column_dimensions['E'].width = 14   # Image Size
+    ws.column_dimensions['F'].width = 25   # Image Topic
+    ws.column_dimensions['G'].width = 40   # Image Context
+    ws.column_dimensions['H'].width = 8    # Page #
+    ws.column_dimensions['I'].width = 25   # Section/Module/Figure #
+    ws.column_dimensions['J'].width = 35   # Filename (Hyperlinked) or Webpage Name
+    ws.column_dimensions['K'].width = 12   # Grade Level
+    ws.column_dimensions['L'].width = 20   # Course Name
+    ws.column_dimensions['M'].width = 20   # Original Source Author
+    ws.column_dimensions['N'].width = 20   # Copyright
+    ws.column_dimensions['O'].width = 16   # Date of Audit
+    ws.column_dimensions['P'].width = 50   # Original Alt Text
+    ws.column_dimensions['Q'].width = 16   # Original Alt Text Character Count
+    ws.column_dimensions['R'].width = 40   # Original Alt Text Notes
+    ws.column_dimensions['S'].width = 50   # AI Short Alt Text
+    ws.column_dimensions['T'].width = 50   # AI Med Alt Text
+    ws.column_dimensions['U'].width = 50   # AI Long Alt Text
+    ws.column_dimensions['V'].width = 40   # AI Notes
+    ws.column_dimensions['W'].width = 50   # New/Suggested Alt Text
+    ws.column_dimensions['X'].width = 18   # New/Suggested Alt Text Count
+    ws.column_dimensions['Y'].width = 40   # New/Suggested Alt Text Notes
+    ws.column_dimensions['Z'].width = 20   # Status - Alt Text Completed?
+    ws.column_dimensions['AA'].width = 30  # Reviewer Notes
+    ws.column_dimensions['AB'].width = 12  # In Word?
+    ws.column_dimensions['AC'].width = 12  # In Excel?
+    ws.column_dimensions['AD'].width = 18  # Date of Completion
 
-    # Columns that should wrap and be auto-fitted (similar idea to website script)
+    # Columns that should wrap and be auto-fitted
     text_columns = [
-        "B",  # Image Filename
-        "C",  # Picture ID
-        "D",  # Image Size
-        "E",  # Image Topic
-        "F",  # Image Context
-        "G",  # Grade Level
-        "H",  # Course Topic
-        "I",  # File Name/Source
-        "J",  # Section/Module
-        "K",  # Page
-        "L",  # Doc Author
-        "M",  # Current Alt Text
-        "O",  # Current Alt Text Notes
-        "P",  # AI Short
-        "Q",  # AI Med
-        "R",  # AI Long
-        "S",  # AI Notes
-        "T",  # Suggested Alt Text
-        "V",  # Suggested Notes
-        "W",  # Reviewer Approved
-        "X",  # Reviewer notes
+        "B",   # Image Filename
+        "C",   # Picture ID
+        "D",   # Image URL
+        "E",   # Image Size
+        "F",   # Image Topic
+        "G",   # Image Context
+        "I",   # Section/Module/Figure #
+        "J",   # Filename or Webpage Name
+        "K",   # Grade Level
+        "L",   # Course Name
+        "M",   # Original Source Author
+        "N",   # Copyright
+        "P",   # Original Alt Text
+        "R",   # Original Alt Text Notes
+        "S",   # AI Short Alt Text
+        "T",   # AI Med Alt Text
+        "U",   # AI Long Alt Text
+        "V",   # AI Notes
+        "W",   # New/Suggested Alt Text
+        "Y",   # New/Suggested Alt Text Notes
+        "Z",   # Status
+        "AA",  # Reviewer Notes
+        "AB",  # In Word?
+        "AC",  # In Excel?
+        "AD",  # Date of Completion
     ]
 
     # Use the same helper as the website script

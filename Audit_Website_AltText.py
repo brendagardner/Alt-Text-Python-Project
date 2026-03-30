@@ -29,9 +29,9 @@ from helpers import alttext_utils as utils
 # CONFIG — EDIT THESE
 # =========================
 # These will be written into every row (can be left "" if you want to fill later).
-DEFAULT_GRADE_BAND = "12-24"       # e.g. "10–12"
-COURSE_TOPIC = "Graph Theory"      # e.g. "College Algebra"
-BOOK_SOURCE_NAME = "Math in Society"
+DEFAULT_GRADE_BAND = "10-14"       # e.g. "10–12"
+COURSE_TOPIC = "PreCalculus"      # e.g. "College Algebra"
+BOOK_SOURCE_NAME = "OpenStax PreCalc 2E"
 
 # Folder where the Excel output file will be written
 OUTPUT_FOLDER = Path(
@@ -40,14 +40,202 @@ OUTPUT_FOLDER = Path(
 
 # List of (URL, Section/Topic) pairs
 URLS_AND_TOPICS = [
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.01:_Introduction" , "6.1: Introduction"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.02:_Graphs" , "6.2: Graphs"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.03:_Shortest_Path" , "6.3: Shortest Path"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.04:_Euler_Circuits_and_the_Chinese_Postman_Problem" , "6.4: Euler Circuits and the Chinese Postman Problem"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.05:_Eulerization_and_the_Chinese_Postman_Problem" , "6.5: Eulerization and the Chinese Postman Problem"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.06:_Hamiltonian_Circuits_and_the_Traveling_Salesman_Problem" , "6.6: Hamiltonian Circuits and the Traveling Salesman Problem"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.07:_Spanning_Trees" , "6.7: Spanning Trees"),
-("https://math.libretexts.org/Bookshelves/Applied_Mathematics/Math_in_Society_(Lippman)/06:_Graph_Theory/6.07:_Spanning_Trees" , "6.8: Exercise"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.01:_Introduction_to_Functions", "1.1: Introduction to Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.10:_Exercises", "1.10: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.10:_Exercises/1.10.01:_Review_Exercises", "1.10.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.10:_Exercises/1.10.02:_Practice_Test", "1.10.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.02:_Functions_and_Function_Notation", "1.2: Functions and Function Notation"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.03:_Domain_and_Range", "1.3: Domain and Range"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.04:_Rates_of_Change_and_Behavior_of_Graphs", "1.4: Rates of Change and Behavior of Graphs"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.05:_Composition_of_Functions", "1.5: Composition of Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.06:_Transformation_of_Functions", "1.6: Transformation of Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.07:_Absolute_Value_Functions", "1.7: Absolute Value Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.08:_Inverse_Functions", "1.8: Inverse Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.09:_Chapter_Review", "1.9: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.09:_Chapter_Review/1.9.01:_Key_Terms", "1.9.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.09:_Chapter_Review/1.9.02:_Key_Equations", "1.9.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/01:_Functions/1.09:_Chapter_Review/1.9.03:_Key_Concepts", "1.9.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry", "10: Analytic Geometry"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.01:_Introduction_to_Analytic_Geometry", "10.1: Introduction to Analytic Geometry"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.02:_The_Ellipse", "10.2: The Ellipse"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.03:_The_Hyperbola", "10.3: The Hyperbola"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.04:_The_Parabola", "10.4: The Parabola"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.05:_Rotation_of_Axes", "10.5: Rotation of Axes"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.06:_Conic_Sections_in_Polar_Coordinates", "10.6: Conic Sections in Polar Coordinates"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.07:_Chapter_Review", "10.7: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.07:_Chapter_Review/10.7.01:_Key_Terms", "10.7.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.07:_Chapter_Review/10.7.02:_Key_Equations", "10.7.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.07:_Chapter_Review/10.7.03:_Key_Concepts", "10.7.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.08:_Exercises", "10.8: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.08:_Exercises/10.8.01:_Review_Exercises", "10.8.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.08:_Exercises/10.8.02:_Practice_Test", "10.8.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/10:_Analytic_Geometry/10.08:_Exercises/10.8.3:_Answers_to_Questions", "10.8.3: Answers to Questions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory", "11: Sequences, Probability and Counting Theory"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.01:_Introduction_to_Sequences_Probability_and_Counting_Theory", "11.1: Introduction to Sequences, Probability and Counting Theory"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.10:_Exercises", "11.10: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.10:_Exercises/11.10.01:_Review_Exercises", "11.10.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.10:_Exercises/11.10.02:_Practice_Test", "11.10.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.02:_Sequences_and_Their_Notations", "11.2: Sequences and Their Notations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.03:_Arithmetic_Sequences", "11.3: Arithmetic Sequences"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.04:_Geometric_Sequences", "11.4: Geometric Sequences"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.05:_Series_and_Their_Notations", "11.5: Series and Their Notations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.06:_Counting_Principles", "11.6: Counting Principles"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.07:_Binomial_Theorem", "11.7: Binomial Theorem"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.08:_Probability", "11.8: Probability"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.09:_Chapter_Review", "11.9: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.09:_Chapter_Review/11.9.01:_Key_Terms", "11.9.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.09:_Chapter_Review/11.9.02:_Key_Equations", "11.9.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/11:_Sequences_Probability_and_Counting_Theory/11.09:_Chapter_Review/11.9.03:_Key_Concepts", "11.9.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus", "12: Introduction to Calculus"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.01:_Introduction_to_Calculus", "12.1: Introduction to Calculus"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.02:_Finding_Limits_-_Numerical_and_Graphical_Approaches", "12.2: Finding Limits - Numerical and Graphical Approaches"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.03:_Finding_Limits_-_Properties_of_Limits", "12.3: Finding Limits - Properties of Limits"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.04:_Continuity", "12.4: Continuity"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.05:_Derivatives", "12.5: Derivatives"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.06:_Chapter_Review", "12.6: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.06:_Chapter_Review/12.6.01:_Key_Terms", "12.6.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.06:_Chapter_Review/12.6.02:_Key_Equations", "12.6.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.06:_Chapter_Review/12.6.03:_Key_Concepts", "12.6.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.07:_Exercises", "12.7: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.07:_Exercises/12.7.01:_Review_Exercises", "12.7.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/12:_Introduction_to_Calculus/12.07:_Exercises/12.7.02:_Practice_Test", "12.7.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix", "13: Appendix"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.01:_Basic_Functions_and_Identities", "13.1: Basic Functions and Identities"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key", "13.2: Answer Key"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.01:_Chapter_1", "13.2.1: Chapter 1"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.10:_Chapter_10", "13.2.10: Chapter 10"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.11:_Chapter_11", "13.2.11: Chapter 11"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.12:_Chapter_12", "13.2.12: Chapter 12"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.02:_Chapter_2", "13.2.2: Chapter 2"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.03:_Chapter_3", "13.2.3: Chapter 3"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.04:_Chapter_4", "13.2.4: Chapter 4"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.05:_Chapter_5", "13.2.5: Chapter 5"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.06:_Chapter_6", "13.2.6: Chapter 6"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.07:_Chapter_7", "13.2.7: Chapter 7"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.08:_Chapter_8", "13.2.8: Chapter 8"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/13:_Appendix/13.02:_Answer_Key/13.2.09:_Chapter_9", "13.2.9: Chapter 9"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions", "2: Linear Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.01:_Introduction_to_Linear_Functions", "2.1: Introduction to Linear Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.02:_Linear_Functions", "2.2: Linear Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.03:_Graphs_of_Linear_Functions", "2.3: Graphs of Linear Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.04:_Modeling_with_Linear_Functions", "2.4: Modeling with Linear Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.05:_Fitting_Linear_Models_to_Data", "2.5: Fitting Linear Models to Data"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.06:_Chapter_Review", "2.6: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.06:_Chapter_Review/2.6.01:_Key_Terms", "2.6.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.06:_Chapter_Review/2.6.02:_Key_Equations", "2.6.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.06:_Chapter_Review/2.6.03:_Key_Concepts", "2.6.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.07:_Exercises", "2.7: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.07:_Exercises/2.7.01:_Review_Exercises", "2.7.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/02:_Linear_Functions/2.07:_Exercises/2.7.02:_Practice_Test", "2.7.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions", "3: Polynomial and Rational Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.01:_Introduction_to_Polynomial_and_Rational_Functions", "3.1: Introduction to Polynomial and Rational Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.10:_Modeling_Using_Variation", "3.10: Modeling Using Variation"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.11:_Chapter_Review", "3.11: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.11:_Chapter_Review/3.11.01:_Key_Terms", "3.11.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.11:_Chapter_Review/3.11.02:_Key_Equations", "3.11.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.11:_Chapter_Review/3.11.03:_Key_Concepts", "3.11.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.12:_Exercises", "3.12: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.12:_Exercises/3.12.01:_Review_Exercises", "3.12.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.12:_Exercises/3.12.02:_Practice_Test", "3.12.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.02:_Complex_Numbers", "3.2: Complex Numbers"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.03:_Quadratic_Functions", "3.3: Quadratic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.04:_Power_Functions_and_Polynomial_Functions", "3.4: Power Functions and Polynomial Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.05:_Graphs_of_Polynomial_Functions", "3.5: Graphs of Polynomial Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.06:_Dividing_Polynomials", "3.6: Dividing Polynomials"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.07:_Zeros_of_Polynomial_Functions", "3.7: Zeros of Polynomial Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.08:_Rational_Functions", "3.8: Rational Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/03:_Polynomial_and_Rational_Functions/3.09:_Inverses_and_Radical_Functions", "3.9: Inverses and Radical Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions", "4: Exponential and Logarithmic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.01:_Introduction_to_Exponential_and_Logarithmic_Functions", "4.1: Introduction to Exponential and Logarithmic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.10:_Chapter_Review", "4.10: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.10:_Chapter_Review/4.10.01:_Key_Terms", "4.10.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.10:_Chapter_Review/4.10.02:_Key_Equations", "4.10.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.10:_Chapter_Review/4.10.03:_Key_Concepts", "4.10.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.11:_Exercises", "4.11: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.11:_Exercises/4.11.01:_Review_Exercises", "4.11.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.11:_Exercises/4.11.02:_Practice_Test", "4.11.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.02:_Exponential_Functions", "4.2: Exponential Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.03:_Graphs_of_Exponential_Functions", "4.3: Graphs of Exponential Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.04:_Logarithmic_Functions", "4.4: Logarithmic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.05:_Graphs_of_Logarithmic_Functions", "4.5: Graphs of Logarithmic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.06:_Logarithmic_Properties", "4.6: Logarithmic Properties"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.07:_Exponential_and_Logarithmic_Equations", "4.7: Exponential and Logarithmic Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.08:_Exponential_and_Logarithmic_Models", "4.8: Exponential and Logarithmic Models"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/04:_Exponential_and_Logarithmic_Functions/4.09:_Fitting_Exponential_Models_to_Data", "4.9: Fitting Exponential Models to Data"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions", "5: Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.01:_Introduction_to_Trigonometric_Functions", "5.1: Introduction to Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.02:_Angles", "5.2: Angles"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.03:_Unit_Circle_-_Sine_and_Cosine_Functions", "5.3: Unit Circle - Sine and Cosine Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.04:_The_Other_Trigonometric_Functions", "5.4: The Other Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.05:_Right_Triangle_Trigonometry", "5.5: Right Triangle Trigonometry"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.06:_Chapter_Review", "5.6: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.06:_Chapter_Review/5.6.01:_Key_Terms", "5.6.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.06:_Chapter_Review/5.6.02:_Key_Equations", "5.6.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.06:_Chapter_Review/5.6.03:_Key_Concepts", "5.6.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.07:_Exercises", "5.7: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.07:_Exercises/5.7.01:_Review_Exercises", "5.7.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/05:_Trigonometric_Functions/5.07:_Exercises/5.7.02:_Practice_Test", "5.7.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions", "6: Periodic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.01:_Introduction_to_Periodic_Functions", "6.1: Introduction to Periodic Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.02:_Graphs_of_the_Sine_and_Cosine_Functions", "6.2: Graphs of the Sine and Cosine Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.03:_Graphs_of_the_Other_Trigonometric_Functions", "6.3: Graphs of the Other Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.04:_Inverse_Trigonometric_Functions", "6.4: Inverse Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.05:_Chapter_Review", "6.5: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.05:_Chapter_Review/6.5.01:_Key_Terms", "6.5.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.05:_Chapter_Review/6.5.02:_Key_Equations", "6.5.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.05:_Chapter_Review/6.5.03:_Key_Concepts", "6.5.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.06:_Exercises", "6.6: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.06:_Exercises/6.6.01:_Review_Exercises", "6.6.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/06:_Periodic_Functions/6.06:_Exercises/6.6.02:_Practice_Test", "6.6.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations", "7: Trigonometric Identities and Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.01:_Introduction_to_Trigonometric_Identities_and_Equations", "7.1: Introduction to Trigonometric Identities and Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.02:_Solving_Trigonometric_Equations_with_Identities", "7.2: Solving Trigonometric Equations with Identities"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.03:_Sum_and_Difference_Identities", "7.3: Sum and Difference Identities"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.04:_Double-Angle_Half-Angle_and_Reduction_Formulas", "7.4: Double-Angle, Half-Angle, and Reduction Formulas"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.05:_Sum-to-Product_and_Product-to-Sum_Formulas", "7.5: Sum-to-Product and Product-to-Sum Formulas"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.06:_Solving_Trigonometric_Equations", "7.6: Solving Trigonometric Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.07:_Modeling_with_Trigonometric_Functions", "7.7: Modeling with Trigonometric Functions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.08:_Chapter_Review", "7.8: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.08:_Chapter_Review/7.8.01:_Key_Terms", "7.8.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.08:_Chapter_Review/7.8.02:_Key_Equations", "7.8.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.08:_Chapter_Review/7.8.03:_Key_Concepts", "7.8.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.09:_Exercises", "7.9: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.09:_Exercises/7.9.01:_Review_Exercises", "7.9.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/07:_Trigonometric_Identities_and_Equations/7.09:_Exercises/7.9.02:_Practice_Test", "7.9.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry", "8: Further Applications of Trigonometry"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.01:_Introduction_to_Further_Applications_of_Trigonometry", "8.1: Introduction to Further Applications of Trigonometry"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.10:_Chapter_Review", "8.10: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.10:_Chapter_Review/8.10.01:_Key_Terms", "8.10.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.10:_Chapter_Review/8.10.02:_Key_Equations", "8.10.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.10:_Chapter_Review/8.10.03:_Key_Concepts", "8.10.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.11:_Exercises", "8.11: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.11:_Exercises/8.11.01:_Review_Exercises", "8.11.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.11:_Exercises/8.11.02:_Practice_Test", "8.11.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.02:_Non-right_Triangles_-_Law_of_Sines", "8.2: Non-right Triangles - Law of Sines"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.03:_Non-right_Triangles_-_Law_of_Cosines", "8.3: Non-right Triangles - Law of Cosines"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.04:_Polar_Coordinates", "8.4: Polar Coordinates"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.05:_Polar_Coordinates_-_Graphs", "8.5: Polar Coordinates - Graphs"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.06:_Polar_Form_of_Complex_Numbers", "8.6: Polar Form of Complex Numbers"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.07:_Parametric_Equations", "8.7: Parametric Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.08:_Parametric_Equations_-_Graphs", "8.8: Parametric Equations - Graphs"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/08:_Further_Applications_of_Trigonometry/8.09:_Vectors", "8.9: Vectors"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities", "9: Systems of Equations and Inequalities"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.01:_Introduction_to_Systems_of_Equations_and_Inequalities", "9.1: Introduction to Systems of Equations and Inequalities"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.10:_Chapter_Review", "9.10: Chapter Review"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.10:_Chapter_Review/9.10.01:_Key_Terms", "9.10.1: Key Terms"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.10:_Chapter_Review/9.10.02:_Key_Equations", "9.10.2: Key Equations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.10:_Chapter_Review/9.10.03:_Key_Concepts", "9.10.3: Key Concepts"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.11:_Exercises", "9.11: Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.11:_Exercises/9.11.01:_Review_Exercises", "9.11.1: Review Exercises"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.11:_Exercises/9.11.02:_Practice_Test", "9.11.2: Practice Test"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.02:_Systems_of_Linear_Equations_-_Two_Variables", "9.2: Systems of Linear Equations - Two Variables"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.03:_Systems_of_Linear_Equations_-_Three_Variables", "9.3: Systems of Linear Equations - Three Variables"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.04:_Systems_of_Nonlinear_Equations_and_Inequalities_-_Two_Variables", "9.4: Systems of Nonlinear Equations and Inequalities - Two Variables"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.05:_Partial_Fractions", "9.5: Partial Fractions"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.06:_Matrices_and_Matrix_Operations", "9.6: Matrices and Matrix Operations"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.07:_Solving_Systems_with_Gaussian_Elimination", "9.7: Solving Systems with Gaussian Elimination"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.08:_Solving_Systems_with_Inverses", "9.8: Solving Systems with Inverses"),
+("https://math.libretexts.org/Bookshelves/Precalculus/Precalculus_2e_(OpenStax)/09:_Systems_of_Equations_and_Inequalities/9.09:_Solving_Systems_with_Cramer's_Rule", "9.9: Solving Systems with Cramer's Rule"),
 ]
 
 
@@ -303,23 +491,38 @@ class CombinedImageExtractor:
     ):
         """
         Create a single Excel file with embedded thumbnails and the
-        NEW column layout:
+        MASTER 30-column layout (A–AD), standardized across all scripts:
 
-        A: Image Thumbnail
-        B: Image Filename
-        C: Image Link
-        D: File Name/Source (Hard coded in configurations)
-        E: Image Size
-        F: Image Topic (Blank for now)
-        G: Image Context
-        H: Grade Level (Hard coded)
-        I: Course Topic (Hard coded)
-        J: Webpage/Source
-        K: Section
-        L: Copyright
-        M: Author
-        N: Current Alt Text
-        O: Current Alt Text Character Count
+        A:  Image Thumbnail
+        B:  Image Filename
+        C:  Picture ID          — blank for website sources
+        D:  Image URL           (hyperlink to image)
+        E:  Image Size
+        F:  Image Topic
+        G:  Image Context
+        H:  Page #              — blank for website sources
+        I:  Section/Module/Figure #
+        J:  Filename (Hyperlinked) or Webpage Name (URL)
+        K:  Grade Level
+        L:  Course Name
+        M:  Original Source Author
+        N:  Copyright
+        O:  Date of Audit       — auto-filled
+        P:  Original Alt Text
+        Q:  Original Alt Text Character Count  — =LEN(P)
+        R:  Original Alt Text Notes            — blank
+        S:  A.I. Short Alt Text                — blank
+        T:  A.I. Med Alt Text                  — blank
+        U:  A.I. Long Alt Text                 — blank
+        V:  A.I. Notes                         — blank
+        W:  New/Suggested Alt Text             — blank
+        X:  New/Suggested Alt Text Count       — =LEN(W)
+        Y:  New/Suggested Alt Text Notes       — blank
+        Z:  Status - Alt Text Completed?       — blank
+        AA: Reviewer Notes                     — blank
+        AB: In Word?                           — blank for website sources
+        AC: In Excel?                          — blank
+        AD: Date of Completion                 — blank
         """
         if not all_images_data:
             print("No images to export.")
@@ -329,45 +532,75 @@ class CombinedImageExtractor:
         ws = wb.active
         ws.title = "Extracted Images"
 
-        # ---- Headers ----
+        # ---- Headers — Master 30-column layout A–AD ----
         headers = [
-            "Image Thumbnail",                    # A
-            "Image Filename",                     # B
-            "Image Link",                         # C
-            "Image Hosting",                   # D
-            "Image Size",                         # E
-            "Image Topic",                        # F
-            "Image Context",                      # G
-            "Grade Level",                        # H
-            "Course Topic",                       # I
-            "Webpage/Source",                     # J
-            "Section",                            # K
-            "Copyright",                          # L
-            "Author",                             # M
-            "Current Alt Text",                   # N
-            "Current Alt Text Character Count",   # O
+            "Image Thumbnail",                               # A  (1)
+            "Image Filename",                                # B  (2)
+            "Picture ID",                                    # C  (3) — blank for website sources
+            "Image URL",                                     # D  (4)
+            "Image Size",                                    # E  (5)
+            "Image Topic",                                   # F  (6)
+            "Image Context",                                 # G  (7)
+            "Page #",                                        # H  (8) — blank for website sources
+            "Section/Module/Figure #",                       # I  (9)
+            "Filename (Hyperlinked) or Webpage Name (URL)",  # J  (10)
+            "Grade Level",                                   # K  (11)
+            "Course Name",                                   # L  (12)
+            "Original Source Author",                        # M  (13)
+            "Copyright",                                     # N  (14)
+            "Date of Audit",                                 # O  (15) — auto-filled
+            "Original Alt Text",                             # P  (16)
+            "Original Alt Text Character Count",             # Q  (17) — =LEN(P)
+            "Original Alt Text Notes",                       # R  (18) — blank
+            "A.I. Short Alt Text",                           # S  (19) — blank
+            "A.I. Med Alt Text",                             # T  (20) — blank
+            "A.I. Long Alt Text",                            # U  (21) — blank
+            "A.I. Notes",                                    # V  (22) — blank
+            "New/Suggested Alt Text",                        # W  (23) — blank
+            "New/Suggested Alt Text Count",                  # X  (24) — =LEN(W)
+            "New/Suggested Alt Text Notes",                  # Y  (25) — blank
+            "Status - Alt Text Completed?\n(Original/Suggested/N)",  # Z  (26) — blank
+            "Reviewer Notes",                                # AA (27) — blank
+            "In Word?",                                      # AB (28) — blank for website sources
+            "In Excel?",                                     # AC (29) — blank
+            "Date of Completion",                            # AD (30) — blank
         ]
 
         for col_idx, header in enumerate(headers, start=1):
             cell = ws.cell(row=1, column=col_idx, value=header)
             cell.font = Font(bold=True)
 
-        # Set some base column widths (thumbnail column will be adjusted by helper)
-        ws.column_dimensions['A'].width = utils._pixels_to_column_width(600)
-        ws.column_dimensions['B'].width = 30
-        ws.column_dimensions['C'].width = 40
-        ws.column_dimensions['D'].width = 25
-        ws.column_dimensions['E'].width = 15
-        ws.column_dimensions['F'].width = 25
-        ws.column_dimensions['G'].width = 25
-        ws.column_dimensions['H'].width = 15
-        ws.column_dimensions['I'].width = 25
-        ws.column_dimensions['J'].width = 40
-        ws.column_dimensions['K'].width = 25
-        ws.column_dimensions['L'].width = 20
-        ws.column_dimensions['M'].width = 20
-        ws.column_dimensions['N'].width = 40
-        ws.column_dimensions['O'].width = 15
+        # Column widths — Master 30-column layout
+        ws.column_dimensions['A'].width = utils._pixels_to_column_width(600)  # Image Thumbnail
+        ws.column_dimensions['B'].width = 30   # Image Filename
+        ws.column_dimensions['C'].width = 18   # Picture ID
+        ws.column_dimensions['D'].width = 40   # Image URL
+        ws.column_dimensions['E'].width = 15   # Image Size
+        ws.column_dimensions['F'].width = 25   # Image Topic
+        ws.column_dimensions['G'].width = 40   # Image Context
+        ws.column_dimensions['H'].width = 8    # Page #
+        ws.column_dimensions['I'].width = 25   # Section/Module/Figure #
+        ws.column_dimensions['J'].width = 40   # Filename (Hyperlinked) or Webpage Name
+        ws.column_dimensions['K'].width = 12   # Grade Level
+        ws.column_dimensions['L'].width = 20   # Course Name
+        ws.column_dimensions['M'].width = 20   # Original Source Author
+        ws.column_dimensions['N'].width = 20   # Copyright
+        ws.column_dimensions['O'].width = 16   # Date of Audit
+        ws.column_dimensions['P'].width = 50   # Original Alt Text
+        ws.column_dimensions['Q'].width = 16   # Original Alt Text Character Count
+        ws.column_dimensions['R'].width = 40   # Original Alt Text Notes
+        ws.column_dimensions['S'].width = 50   # A.I. Short Alt Text
+        ws.column_dimensions['T'].width = 50   # A.I. Med Alt Text
+        ws.column_dimensions['U'].width = 50   # A.I. Long Alt Text
+        ws.column_dimensions['V'].width = 40   # A.I. Notes
+        ws.column_dimensions['W'].width = 50   # New/Suggested Alt Text
+        ws.column_dimensions['X'].width = 18   # New/Suggested Alt Text Count
+        ws.column_dimensions['Y'].width = 40   # New/Suggested Alt Text Notes
+        ws.column_dimensions['Z'].width = 20   # Status - Alt Text Completed?
+        ws.column_dimensions['AA'].width = 30  # Reviewer Notes
+        ws.column_dimensions['AB'].width = 12  # In Word?
+        ws.column_dimensions['AC'].width = 12  # In Excel?
+        ws.column_dimensions['AD'].width = 18  # Date of Completion
 
         # ---- Data rows ----
         current_row = 2
@@ -386,62 +619,71 @@ class CombinedImageExtractor:
             parsed = urlparse(image_url)
             image_filename = Path(parsed.path).name if parsed.path else ""
 
-            # H/I: grade level & course topic pulled from config
+            # K/L: grade level & course topic pulled from config
             grade_value = grade_band or ""
             course_value = course_topic or ""
 
-            # N/O: alt text and character count
+            # P: Original Alt Text
             current_alt = alt_text
-            alt_char_count = len(current_alt) if current_alt else 0
 
-            # J: webpage/source (hyperlink)
+            # Column B (2): Image Filename
+            ws.cell(row=current_row, column=2, value=image_filename)
+
+            # Column C (3): Picture ID — blank for website sources
+
+            # Column D (4): Image URL (hyperlink)
+            ws.cell(row=current_row, column=4, value=image_url)
+            if image_url:
+                ws.cell(row=current_row, column=4).hyperlink = image_url
+                ws.cell(row=current_row, column=4).style = "Hyperlink"
+
+            # Column F (6): Image Topic (using HTML title as a placeholder)
+            ws.cell(row=current_row, column=6, value=image_title)
+
+            # Column G (7): Image Context (paragraph before the image)
+            ws.cell(row=current_row, column=7, value=image_context)
+
+            # Column H (8): Page # — blank for website sources
+
+            # Column I (9): Section/Module/Figure #
+            ws.cell(row=current_row, column=9, value=section)
+
+            # Column J (10): Webpage/Source (hyperlink)
             ws.cell(row=current_row, column=10, value=webpage)
             if webpage:
                 ws.cell(row=current_row, column=10).hyperlink = webpage
                 ws.cell(row=current_row, column=10).style = "Hyperlink"
 
-            # C: image link (hyperlink)
-            ws.cell(row=current_row, column=3, value=image_url)
-            if image_url:
-                ws.cell(row=current_row, column=3).hyperlink = image_url
-                ws.cell(row=current_row, column=3).style = "Hyperlink"
+            # Column K (11): Grade Level
+            ws.cell(row=current_row, column=11, value=grade_value)
 
-            # B: filename
-            ws.cell(row=current_row, column=2, value=image_filename)
+            # Column L (12): Course Name
+            ws.cell(row=current_row, column=12, value=course_value)
 
-            # 🔹 D: File Name/Source as an Excel formula based on C (image link)
-            formula_str = (
-                f'=IF(LEFT(C{current_row},10)="https://s3","Amazon AWS",'
-                f'IF(LEFT(C{current_row},19)="https://textimgs.s3","AMS MIT","Other"))'
-            )
-            ws.cell(row=current_row, column=4, value=formula_str)
-
-            # F: Image Topic (using HTML title as a placeholder)
-            ws.cell(row=current_row, column=6, value=image_title)
-
-            # 🔹 G: Image Context (paragraph before the image)
-            ws.cell(row=current_row, column=7, value=image_context)
-
-            # H: Grade Level
-            ws.cell(row=current_row, column=8, value=grade_value)
-
-            # I: Course Topic
-            ws.cell(row=current_row, column=9, value=course_value)
-
-            # K: Section (the chapter/section label you passed in)
-            ws.cell(row=current_row, column=11, value=section)
-
-            # L: Copyright
-            ws.cell(row=current_row, column=12, value=copyright_text)
-
-            # M: Author
+            # Column M (13): Original Source Author
             ws.cell(row=current_row, column=13, value=author)
 
-            # N: Current Alt Text
-            ws.cell(row=current_row, column=14, value=current_alt)
+            # Column N (14): Copyright
+            ws.cell(row=current_row, column=14, value=copyright_text)
 
-            # O: Current Alt Text Character Count
-            ws.cell(row=current_row, column=15, value=alt_char_count)
+            # Column O (15): Date of Audit — auto-filled with today's date
+            ws.cell(row=current_row, column=15, value=datetime.now().strftime("%m/%d/%Y"))
+
+            # Column P (16): Original Alt Text
+            ws.cell(row=current_row, column=16, value=current_alt)
+
+            # Column Q (17): Original Alt Text Character Count — formula =LEN(P)
+            ws.cell(row=current_row, column=17, value=f"=LEN(P{current_row})")
+
+            # Columns R–V (18–22): Original Alt Text Notes, A.I. columns — blank
+            # Column W (23): New/Suggested Alt Text — blank
+
+            # Column X (24): New/Suggested Alt Text Count — formula =LEN(W)
+            ws.cell(row=current_row, column=24, value=f"=LEN(W{current_row})")
+
+            # Columns Y–AA (25–27): Notes / Status / Reviewer Notes — blank
+            # Column AB (28): In Word? — blank for website sources
+            # Columns AC–AD (29–30): In Excel? / Date of Completion — blank
 
             # --- A: Thumbnail + E: Image Size ---
             try:
@@ -487,11 +729,13 @@ class CombinedImageExtractor:
             current_row += 1
 
 
-        # Wrap text and autofit B–O (all text columns), cap at ~240px
+        # Wrap text and autofit B–AD (all text columns), cap at ~240px
         text_columns = [
             "B", "C", "D", "E", "F", "G",
             "H", "I", "J", "K", "L", "M",
-            "N", "O",
+            "N", "O", "P", "Q", "R", "S",
+            "T", "U", "V", "W", "X", "Y",
+            "Z", "AA", "AB", "AC", "AD",
         ]
         utils.wrap_and_autofit_columns(
             ws,

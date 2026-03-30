@@ -14,29 +14,37 @@
 # Step 3. Run this script.
 # Step 4. VBA script to put images in cell and filter, as desired.
 
-# Columns:
-# A: Image Thumbnail
-# B: Image Filename
-# C: Image Link
-# D: File Name/Source (derived from URL / formula)
-# E: Image Size (original width x height)
-# F: Image Topic (AI topic 1-2 words)
-# G: Image Context (nearby text / figcaption)
-# H: Grade Level (from config)
-# I: Course Topic (from config)
-# J: Webpage/Source
-# K: Section
-# L: Copyright
-# M: Author
-# N: Current Alt Text
-# O: Current Alt Text Character Count
-# P: AI Short Alt Text
-# Q: AI Standard Alt Text
-# R: AI Long Alt Text
-# S: AI Notes
-# T: AI Short Alt Text Character Count
-# U: AI Standard Alt Text Character Count
-# V: AI Long Alt Text Character Count
+# Master 30-column layout (A–AD) — standardized across all scripts:
+# A:  Image Thumbnail
+# B:  Image Filename
+# C:  Picture ID          — blank for website sources
+# D:  Image URL
+# E:  Image Size (original width x height)
+# F:  Image Topic         (AI topic 1-2 words)
+# G:  Image Context       (nearby text / figcaption)
+# H:  Page #              — blank for website sources
+# I:  Section/Module/Figure #
+# J:  Filename (Hyperlinked) or Webpage Name (URL)
+# K:  Grade Level         (from config)
+# L:  Course Name         (from config)
+# M:  Original Source Author
+# N:  Copyright
+# O:  Date of Audit       — auto-filled
+# P:  Original Alt Text
+# Q:  Original Alt Text Character Count  — =LEN(P)
+# R:  Original Alt Text Notes            — blank
+# S:  A.I. Short Alt Text
+# T:  A.I. Med Alt Text
+# U:  A.I. Long Alt Text
+# V:  A.I. Notes
+# W:  New/Suggested Alt Text             — blank
+# X:  New/Suggested Alt Text Count       — =LEN(W)
+# Y:  New/Suggested Alt Text Notes       — blank
+# Z:  Status - Alt Text Completed?       — blank
+# AA: Reviewer Notes                     — blank
+# AB: In Word?                           — blank for website sources
+# AC: In Excel?                          — blank
+# AD: Date of Completion                 — blank
 
 import os
 import json
@@ -393,59 +401,75 @@ class CombinedImageExtractor:
         ws = wb.active
         ws.title = "Website Alt Text AI Output"
 
-        # Headers A–V
+        # Headers — Master 30-column layout A–AD
         headers = [
-            "Image Thumbnail",                      # A
-            "Image Filename",                       # B
-            "Image Link",                           # C
-            "File Name/Source",                     # D
-            "Image Size",                           # E
-            "Image Topic",                          # F
-            "Image Context",                        # G
-            "Grade Level",                          # H
-            "Course Topic",                         # I
-            "Webpage/Source",                       # J
-            "Section",                              # K
-            "Copyright",                            # L
-            "Author",                               # M
-            "Current Alt Text",                     # N
-            "Current Alt Text Character Count",     # O
-            "AI Short Alt Text",                    # P
-            "AI Standard Alt Text",                 # Q
-            "AI Long Alt Text",                     # R
-            "AI Notes",                             # S
-            "Brenda's Suggested Alt Text",          # T
-            "Suggested Character Count",            # U
-            "Brenda's Notes",                       # V
+            "Image Thumbnail",                               # A  (1)
+            "Image Filename",                                # B  (2)
+            "Picture ID",                                    # C  (3) — blank for website sources
+            "Image URL",                                     # D  (4)
+            "Image Size",                                    # E  (5)
+            "Image Topic",                                   # F  (6)
+            "Image Context",                                 # G  (7)
+            "Page #",                                        # H  (8) — blank for website sources
+            "Section/Module/Figure #",                       # I  (9)
+            "Filename (Hyperlinked) or Webpage Name (URL)",  # J  (10)
+            "Grade Level",                                   # K  (11)
+            "Course Name",                                   # L  (12)
+            "Original Source Author",                        # M  (13)
+            "Copyright",                                     # N  (14)
+            "Date of Audit",                                 # O  (15) — auto-filled
+            "Original Alt Text",                             # P  (16)
+            "Original Alt Text Character Count",             # Q  (17) — =LEN(P)
+            "Original Alt Text Notes",                       # R  (18) — blank
+            "A.I. Short Alt Text",                           # S  (19)
+            "A.I. Med Alt Text",                             # T  (20)
+            "A.I. Long Alt Text",                            # U  (21)
+            "A.I. Notes",                                    # V  (22)
+            "New/Suggested Alt Text",                        # W  (23) — blank
+            "New/Suggested Alt Text Count",                  # X  (24) — =LEN(W)
+            "New/Suggested Alt Text Notes",                  # Y  (25) — blank
+            "Status - Alt Text Completed?\n(Original/Suggested/N)",  # Z  (26) — blank
+            "Reviewer Notes",                                # AA (27) — blank
+            "In Word?",                                      # AB (28) — blank for website sources
+            "In Excel?",                                     # AC (29) — blank
+            "Date of Completion",                            # AD (30) — blank
         ]
 
         for col_idx, header in enumerate(headers, start=1):
             cell = ws.cell(row=1, column=col_idx, value=header)
             cell.font = Font(bold=True)
 
-        # Base column widths
-        ws.column_dimensions["A"].width = utils._pixels_to_column_width(600)
-        ws.column_dimensions["B"].width = 30
-        ws.column_dimensions["C"].width = 40
-        ws.column_dimensions["D"].width = 25
-        ws.column_dimensions["E"].width = 15
-        ws.column_dimensions["F"].width = 25
-        ws.column_dimensions["G"].width = 30
-        ws.column_dimensions["H"].width = 15
-        ws.column_dimensions["I"].width = 25
-        ws.column_dimensions["J"].width = 40
-        ws.column_dimensions["K"].width = 25
-        ws.column_dimensions["L"].width = 20
-        ws.column_dimensions["M"].width = 20
-        ws.column_dimensions["N"].width = 40
-        ws.column_dimensions["O"].width = 15
-        ws.column_dimensions["P"].width = 40
-        ws.column_dimensions["Q"].width = 40
-        ws.column_dimensions["R"].width = 40
-        ws.column_dimensions["S"].width = 30
-        ws.column_dimensions["T"].width = 15
-        ws.column_dimensions["U"].width = 15
-        ws.column_dimensions["V"].width = 15
+        # Column widths — Master 30-column layout
+        ws.column_dimensions["A"].width = utils._pixels_to_column_width(600)  # Image Thumbnail
+        ws.column_dimensions["B"].width = 30   # Image Filename
+        ws.column_dimensions["C"].width = 18   # Picture ID
+        ws.column_dimensions["D"].width = 40   # Image URL
+        ws.column_dimensions["E"].width = 15   # Image Size
+        ws.column_dimensions["F"].width = 25   # Image Topic
+        ws.column_dimensions["G"].width = 40   # Image Context
+        ws.column_dimensions["H"].width = 8    # Page #
+        ws.column_dimensions["I"].width = 25   # Section/Module/Figure #
+        ws.column_dimensions["J"].width = 40   # Filename (Hyperlinked) or Webpage Name
+        ws.column_dimensions["K"].width = 12   # Grade Level
+        ws.column_dimensions["L"].width = 20   # Course Name
+        ws.column_dimensions["M"].width = 20   # Original Source Author
+        ws.column_dimensions["N"].width = 20   # Copyright
+        ws.column_dimensions["O"].width = 16   # Date of Audit
+        ws.column_dimensions["P"].width = 50   # Original Alt Text
+        ws.column_dimensions["Q"].width = 16   # Original Alt Text Character Count
+        ws.column_dimensions["R"].width = 40   # Original Alt Text Notes
+        ws.column_dimensions["S"].width = 50   # A.I. Short Alt Text
+        ws.column_dimensions["T"].width = 50   # A.I. Med Alt Text
+        ws.column_dimensions["U"].width = 50   # A.I. Long Alt Text
+        ws.column_dimensions["V"].width = 40   # A.I. Notes
+        ws.column_dimensions["W"].width = 50   # New/Suggested Alt Text
+        ws.column_dimensions["X"].width = 18   # New/Suggested Alt Text Count
+        ws.column_dimensions["Y"].width = 40   # New/Suggested Alt Text Notes
+        ws.column_dimensions["Z"].width = 20   # Status - Alt Text Completed?
+        ws.column_dimensions["AA"].width = 30  # Reviewer Notes
+        ws.column_dimensions["AB"].width = 12  # In Word?
+        ws.column_dimensions["AC"].width = 12  # In Excel?
+        ws.column_dimensions["AD"].width = 18  # Date of Completion
 
         current_row = 2
 
@@ -463,59 +487,60 @@ class CombinedImageExtractor:
             parsed = urlparse(image_url)
             image_filename = Path(parsed.path).name if parsed.path else ""
 
-            # H/I: grade level & course topic
+            # K/L: grade level & course topic
             grade_value = grade_band or ""
             course_value = course_topic or ""
 
-            # N/O: current alt + char count
+            # P: Original Alt Text
             current_alt = alt_text
-            alt_char_count = len(current_alt) if current_alt else 0
 
-            # J: webpage/source (hyperlink)
+            # Column B (2): Image Filename
+            ws.cell(row=current_row, column=2, value=image_filename)
+
+            # Column C (3): Picture ID — blank for website sources
+
+            # Column D (4): Image URL (hyperlink)
+            ws.cell(row=current_row, column=4, value=image_url)
+            if image_url:
+                ws.cell(row=current_row, column=4).hyperlink = image_url
+                ws.cell(row=current_row, column=4).style = "Hyperlink"
+
+            # Column G (7): Image Context
+            ws.cell(row=current_row, column=7, value=image_context)
+
+            # Column H (8): Page # — blank for website sources
+
+            # Column I (9): Section/Module/Figure #
+            ws.cell(row=current_row, column=9, value=section)
+
+            # Column J (10): Webpage/Source (hyperlink)
             ws.cell(row=current_row, column=10, value=webpage)
             if webpage:
                 ws.cell(row=current_row, column=10).hyperlink = webpage
                 ws.cell(row=current_row, column=10).style = "Hyperlink"
 
-            # C: image link (hyperlink)
-            ws.cell(row=current_row, column=3, value=image_url)
-            if image_url:
-                ws.cell(row=current_row, column=3).hyperlink = image_url
-                ws.cell(row=current_row, column=3).style = "Hyperlink"
+            # Column K (11): Grade Level
+            ws.cell(row=current_row, column=11, value=grade_value)
 
-            # B: filename
-            ws.cell(row=current_row, column=2, value=image_filename)
+            # Column L (12): Course Name
+            ws.cell(row=current_row, column=12, value=course_value)
 
-            # D: File Name/Source as formula based on C (image link)
-            formula_str = (
-                f'=IF(LEFT(C{current_row},10)="https://s3","Amazon AWS",'
-                f'IF(LEFT(C{current_row},19)="https://textimgs.s3","AMS MIT","Other"))'
-            )
-            ws.cell(row=current_row, column=4, value=formula_str)
-
-            # G: Image Context
-            ws.cell(row=current_row, column=7, value=image_context)
-
-            # H: Grade Level
-            ws.cell(row=current_row, column=8, value=grade_value)
-
-            # I: Course Topic
-            ws.cell(row=current_row, column=9, value=course_value)
-
-            # K: Section
-            ws.cell(row=current_row, column=11, value=section)
-
-            # L: Copyright
-            ws.cell(row=current_row, column=12, value=copyright_text)
-
-            # M: Author
+            # Column M (13): Original Source Author
             ws.cell(row=current_row, column=13, value=author)
 
-            # N: Current Alt Text
-            ws.cell(row=current_row, column=14, value=current_alt)
+            # Column N (14): Copyright
+            ws.cell(row=current_row, column=14, value=copyright_text)
 
-            # O: Current Alt Text Character Count
-            ws.cell(row=current_row, column=15, value=alt_char_count)
+            # Column O (15): Date of Audit — auto-filled with today's date
+            ws.cell(row=current_row, column=15, value=datetime.now().strftime("%m/%d/%Y"))
+
+            # Column P (16): Original Alt Text
+            ws.cell(row=current_row, column=16, value=current_alt)
+
+            # Column Q (17): Original Alt Text Character Count — formula =LEN(P)
+            ws.cell(row=current_row, column=17, value=f"=LEN(P{current_row})")
+
+            # Column R (18): Original Alt Text Notes — blank
 
             # --- Download image once: use for thumbnail + API ---
             try:
@@ -561,16 +586,24 @@ class CombinedImageExtractor:
             else:
                 image_topic_ai = ""
 
-            # F: Image Topic — prefer AI topic (1–2 words), fallback to HTML title
+            # Column F (6): Image Topic — prefer AI topic (1–2 words), fallback to HTML title
             topic_value = image_topic_ai or image_title
             ws.cell(row=current_row, column=6, value=topic_value)
 
+            # Columns S–V (19–22): A.I. alt text variants
+            ws.cell(row=current_row, column=19, value=ai_short)        # S: A.I. Short Alt Text
+            ws.cell(row=current_row, column=20, value=ai_standard)     # T: A.I. Med Alt Text
+            ws.cell(row=current_row, column=21, value=ai_long)         # U: A.I. Long Alt Text
+            ws.cell(row=current_row, column=22, value=ai_notes)        # V: A.I. Notes
 
-            # P–V: AI alt text + char counts
-            ws.cell(row=current_row, column=16, value=ai_short)        # P
-            ws.cell(row=current_row, column=17, value=ai_standard)     # Q
-            ws.cell(row=current_row, column=18, value=ai_long)         # R
-            ws.cell(row=current_row, column=19, value=ai_notes)        # S
+            # Column W (23): New/Suggested Alt Text — blank (reviewer fills in)
+
+            # Column X (24): New/Suggested Alt Text Count — formula =LEN(W)
+            ws.cell(row=current_row, column=24, value=f"=LEN(W{current_row})")
+
+            # Columns Y–AA (25–27): Notes / Status / Reviewer Notes — blank
+            # Column AB (28): In Word? — blank for website sources
+            # Columns AC–AD (29–30): In Excel? / Date of Completion — blank
 
 
             # --- A: Thumbnail + E: Image Size ---
@@ -608,12 +641,13 @@ class CombinedImageExtractor:
             current_row += 1
 
 
-        # Wrap text and autofit B–V (text columns), cap at ~240px
+        # Wrap text and autofit B–AD (text columns), cap at ~240px
         text_columns = [
             "B", "C", "D", "E", "F", "G",
             "H", "I", "J", "K", "L", "M",
             "N", "O", "P", "Q", "R", "S",
-            "T", "U", "V",
+            "T", "U", "V", "W", "X", "Y",
+            "Z", "AA", "AB", "AC", "AD",
         ]
         utils.wrap_and_autofit_columns(
             ws,

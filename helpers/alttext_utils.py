@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -31,6 +32,72 @@ except ImportError:
     print("   Install with: pip install cairosvg")
 
 LIBREOFFICE_PATH = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+ZAMZAR_BASE_URL  = "https://api.zamzar.com"
+
+
+def convert_emf_via_zamzar(
+        img_bytes: bytes,
+        original_filename: str,
+        api_key: str,
+) -> Optional[bytes]:
+    """
+    Convert EMF to high-quality PNG (300 DPI) using the Zamzar API.
+
+    Returns PNG bytes on success, None on failure.
+    Does NOT save to disk — callers handle persistence if needed.
+
+    Usage:
+        png = convert_emf_via_zamzar(emf_bytes, "image1.emf", ZAMZAR_API_KEY)
+        if png:
+            Path("image1.png").write_bytes(png)
+    """
+    try:
+        import requests
+    except ImportError:
+        print("⚠️  'requests' library not installed. Run: pip install requests")
+        return None
+
+    if not api_key:
+        print("⚠️  No Zamzar API key provided — skipping EMF conversion.")
+        return None
+
+    jobs_url = f"{ZAMZAR_BASE_URL}/v1/jobs"
+    try:
+        files = {"source_file": (original_filename, BytesIO(img_bytes), "image/x-emf")}
+        data  = {"target_format": "png", "export_options": "dpi=300"}
+        resp  = requests.post(jobs_url, auth=(api_key, ""), files=files, data=data, timeout=60)
+        resp.raise_for_status()
+        job_id = resp.json()["id"]
+
+        for _ in range(30):
+            status_resp = requests.get(
+                f"{ZAMZAR_BASE_URL}/v1/jobs/{job_id}",
+                auth=(api_key, ""), timeout=30,
+            )
+            status_resp.raise_for_status()
+            status = status_resp.json()
+
+            if status["status"] == "successful":
+                file_id = status["target_files"][0]["id"]
+                dl_resp = requests.get(
+                    f"{ZAMZAR_BASE_URL}/v1/files/{file_id}/content",
+                    auth=(api_key, ""), timeout=60,
+                )
+                dl_resp.raise_for_status()
+                return dl_resp.content
+
+            elif status["status"] == "failed":
+                print(f"❌ Zamzar conversion failed for {original_filename}")
+                return None
+
+            time.sleep(10)
+
+        print(f"⚠️  Zamzar timed out for {original_filename}")
+        return None
+
+    except Exception as e:
+        print(f"❌ Zamzar error for {original_filename}: {e}")
+        return None
 TARGET_IMAGE_WIDTH_PX = 800
 ROW_HEIGHT_SCALE = 0.85
 
@@ -39,20 +106,19 @@ You are an accessibility expert for STEM education. Generate alt text according 
 - Be accurate and concise. Do not reveal answers not explicitly shown.
 - Use math screen-reader conventions:
 • Negatives: use “negative three,” not “-3”.
-• Fractions: use “three fourths”, not “3/4.” 
-• Fractions in expressions: “quantity a plus b over c,” when needed for clarity.
+• Fractions: use “three fourths”, not “3/4.”
 • Intervals/inequalities: use “x is greater than or equal to three,” avoid symbols.
-• Exponents: “x squared,” “x cubed,” “x to the fourth power” 
-• Roots: “square root of,” “cube root of”, "fourth root of x"
-• Functions: “f of x,” “g of x.”, not f(x) or g(x).  
+• Exponents/Roots: “x squared,” “x cubed,” “x to the fourth power.”
+• Roots: “square root of,” “cube root of”, “f of x,” “g of x.”
 • Coordinate plane: Coordinate plane grid with both x-axis and y-axis from negative 10 to 10
 • Coordinates: "(negative 1,5)"
 • Axes: “x axis,” “y axis,” include units if shown.
 • Horizontal Number lines: Include tick marks and labels given.  
 • Lines and slopes: say “increasing,” “decreasing,” “constant,” “positive slope,” “negative slope.”
-• Graphs of Function: type if clear (linear, quadratic, cubic, rational, polynomial), key features if shown (intercepts, vertex, max/min, asymptotes).
+• Fractions in expressions: “quantity a plus b over c,” when needed for clarity.
+• Functions: type if clear (linear, quadratic), key features if shown (intercepts, vertex, max/min, asymptotes).
 • Order of description: most critical to context, then left to right, bottom-up
-• Graphs and charts - include: what type (graph, bar chart, scatter plot), describe comparison or trend, not exact numbers unless the image highlights them.
+• Graphs and charts - include: what type (graph, bar chart, scatter plot), axes names/units if visible, describe comparison or trend, not exact numbers unless the image highlights them.
 - Provide three variants per image:
   1) Short (<= 120 characters)
   2) Standard (<= 250 characters)
@@ -65,7 +131,7 @@ You are an accessibility expert for STEM education. Generate alt text according 
 - Do not include colors unless colors are mentioned in context.  
 - Do not use "an image of" and similar.
 - No need to include information also found in the image caption or image context (written just before or after the image). Do not guess about context not evident.  Note this in "AI notes" 
-- If there is a clear question in the surrounding context or text, ensure alt text can answer that question without noting answer. 
+- If there is a clear question in the context, ensure alt text can answer that question without noting answer. 
 
 Return ONLY a valid JSON object with these exact keys: short, standard, long, notes, topic
 - short, standard, and long are alt-text variants.
@@ -218,6 +284,48 @@ def build_rid_page_map(docx_path: Path) -> Dict[str, str]:
     return {rid: _fmt(pages) for rid, pages in rid_pages.items()}
 
 
+def build_rid_decorative_map(docx_path: Path) -> set:
+    """
+    Returns a set of rIds for images marked as decorative in the DOCX.
+
+    An image is decorative when its wp:docPr element contains an
+    <a11y:decorative val="1"/> child (inside an a:extLst), which is
+    the marker Word writes when you tick "Mark as decorative" in the
+    Alt Text panel.
+    """
+    A11Y_NS = "http://schemas.microsoft.com/office/drawing/2018/a11y"
+    WP_NS   = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+    A_NS    = "http://schemas.openxmlformats.org/drawingml/2006/main"
+    R_NS    = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    W_NS    = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    decorative_rids: set = set()
+
+    try:
+        with zipfile.ZipFile(docx_path, "r") as z:
+            root = etree.fromstring(z.read("word/document.xml"))
+    except Exception:
+        return decorative_rids
+
+    for drawing in root.findall(f".//{{{W_NS}}}drawing"):
+        docpr = drawing.find(f"{{{WP_NS}}}docPr")
+        blip  = drawing.find(f".//{{{A_NS}}}blip")
+
+        if docpr is None or blip is None:
+            continue
+
+        rid = blip.get(f"{{{R_NS}}}embed")
+        if not rid:
+            continue
+
+        # <a11y:decorative val="1"/> anywhere inside the docPr subtree
+        decorative_el = docpr.find(f".//{{{A11Y_NS}}}decorative")
+        if decorative_el is not None and decorative_el.get("val") == "1":
+            decorative_rids.add(rid)
+
+    return decorative_rids
+
+
 def build_rid_figure_map(docx_path: Path) -> Dict[str, str]:
     """
     Returns {rId: figure_label} for every image in the document.
@@ -265,10 +373,14 @@ def build_rid_figure_map(docx_path: Path) -> Dict[str, str]:
     def _walk(el):
         tag = el.tag.split('}')[-1] if '}' in el.tag else el.tag
         if tag == 'p':
-            if _is_caption_style(el):
-                lbl = _parse_caption(el)
-                if lbl:
-                    pending_caption[0] = lbl
+            # Try to parse a figure label from any paragraph, regardless of style.
+            # _parse_caption returns "" if no "Figure X.X.X" pattern is found,
+            # so this is safe to call on every paragraph — it replaces the old
+            # _is_caption_style() guard that required the Word "Caption" style,
+            # which many documents (including OER Trigonometry) do not apply.
+            lbl = _parse_caption(el)
+            if lbl:
+                pending_caption[0] = lbl
             for blip in el.iter(BLIP):
                 rid = blip.get(f"{{{R_NS}}}embed", "")
                 if rid and pending_caption[0]:
@@ -292,18 +404,20 @@ def extract_figure_label_before_image(paragraphs, para_idx: int) -> str:
     its full label (including auto-numbered suffix captured via w:t).
     Falls back to the section number from the nearest heading.
     """
-    # --- STEP 1: Caption paragraph (search back up to 10 paragraphs) ---
+    # --- STEP 1: Search back up to 10 paragraphs for a Figure label ---
+    # Checks any paragraph for a "Figure X.X.X" pattern, regardless of style.
+    # The old guard (p.style.name == 'Caption') missed documents like OER Trigonometry
+    # where figure-label paragraphs use Normal style rather than Word's Caption style.
     search_range = max(0, para_idx - 10)
     for i in range(para_idx, search_range - 1, -1):
         p = paragraphs[i]
-        if p.style.name == 'Caption':
-            full_text = get_full_paragraph_text(p._element).strip()
-            m = re.search(r'Figure\s+([A-Za-z]*\d+\.\d+\.?\s*\d*)', full_text, re.IGNORECASE)
-            if m:
-                raw = m.group(1).strip()
-                raw = re.sub(r'\.\s+', '.', raw)
-                raw = re.sub(r'\s+', '', raw).rstrip('.')
-                return raw
+        full_text = get_full_paragraph_text(p._element).strip()
+        m = re.search(r'Figure\s+([A-Za-z]*\d+\.\d+\.?\s*\d*)', full_text, re.IGNORECASE)
+        if m:
+            raw = m.group(1).strip()
+            raw = re.sub(r'\.\s+', '.', raw)
+            raw = re.sub(r'\s+', '', raw).rstrip('.')
+            return raw
 
     # --- STEP 2: Fallback to nearest section number heading ---
     for i in range(para_idx, -1, -1):
@@ -605,87 +719,41 @@ def convert_emf_to_png_bytes_libreoffice(
                 pass
 
 
-def convert_svg_to_png_bytes(svg_bytes: bytes) -> Optional[bytes]:
-    """
-    Convert SVG bytes to PNG using CairoSVG (pure Python, works great on macOS).
-    Falls back to None if conversion fails.
-    """
-    if not HAS_CAIROSVG:
-        print("⚠️  CairoSVG not available for SVG conversion")
-        return None
-
-    try:
-        png_bytes = cairosvg.svg2png(bytestring=svg_bytes)
-        return png_bytes
-    except Exception as e:
-        print(f"⚠️  CairoSVG conversion failed: {e}")
-        return None
-
-
-def convert_emf_to_png_bytes_libreoffice(
-        emf_bytes: bytes,
-        temp_dir: Path,
-) -> Optional[bytes]:
-    """
-    Convert EMF to PNG using LibreOffice (still needed for EMF files).
-    """
-    temp_in = temp_dir / "vector_input.emf"
-    png_path = temp_dir / "vector_input.png"
-
-    try:
-        temp_in.write_bytes(emf_bytes)
-
-        subprocess.run(
-            [
-                LIBREOFFICE_PATH,
-                "--headless",
-                "--convert-to",
-                "png",
-                "--outdir",
-                str(temp_dir),
-                str(temp_in),
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=30,
-        )
-
-        if png_path.exists():
-            return png_path.read_bytes()
-        return None
-
-    except Exception as e:
-        print(f"⚠️  LibreOffice EMF conversion failed: {e}")
-        return None
-
-    finally:
-        # Best effort cleanup
-        for p in (temp_in, png_path):
-            try:
-                p.unlink(missing_ok=True)
-            except Exception:
-                pass
-
-
 def convert_vector_to_png_bytes(
         input_bytes: bytes,
         suffix: str,
         temp_dir: Path,
+        zamzar_api_key: str = None,
 ) -> Optional[bytes]:
     """
     Convert vector images (SVG or EMF) to PNG.
+
+    For EMF files, uses Zamzar API (300 DPI, high quality) when zamzar_api_key
+    is provided. Falls back to LibreOffice if no key is given — but note that
+    LibreOffice produces compressed output on macOS; Zamzar is strongly preferred.
+
+    Args:
+        input_bytes:     Raw bytes of the source image.
+        suffix:          File extension, e.g. ".emf" or ".svg".
+        temp_dir:        Temp directory for LibreOffice fallback only.
+        zamzar_api_key:  Zamzar API key (from os.getenv('ZAMZAR')).
+                         Pass this whenever available to use Zamzar for EMF.
     """
     suffix_lower = suffix.lower()
 
     if suffix_lower == ".svg":
-        print(f"🔄 Converting SVG using CairoSVG...")
+        print("🔄 Converting SVG using CairoSVG...")
         return convert_svg_to_png_bytes(input_bytes)
 
     elif suffix_lower == ".emf":
-        # We now handle this via Zamzar in the main script to get .PS and .PNG
-        # This remains as a fallback if Zamzar isn't used
-        print(f"🔄 Converting EMF using LibreOffice fallback...")
+        if zamzar_api_key:
+            print("🔄 Converting EMF via Zamzar (300 DPI)...")
+            result = convert_emf_via_zamzar(input_bytes, f"image{suffix}", zamzar_api_key)
+            if result:
+                return result
+            print("⚠️  Zamzar failed — falling back to LibreOffice (lower quality on macOS).")
+        else:
+            print("🔄 Converting EMF via LibreOffice (no Zamzar key provided)...")
         return convert_emf_to_png_bytes_libreoffice(input_bytes, temp_dir)
 
     else:

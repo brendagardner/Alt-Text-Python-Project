@@ -1,13 +1,21 @@
-# This script takes an existing Excel file whose columns A–O are already filled (same layout as your website alt-text/export sheet), and then:
-# - Uses Column C (Image Link) to re-download images
-# - Calls Abacus AI to generate alt text if Column N (Current Alt Text) is empty - Change on Row 155
-# - Fills Columns P–S:
-#     P: AI Short Alt Text
-#     Q: AI Standard Alt Text
-#     R: AI Long Alt Text
-#     S: AI Notes
+# This script takes an existing Excel file in the Master 30-column layout (A–AD) and then:
+# - Uses Column D (Image URL) to re-download images
+# - Calls Abacus AI to generate alt text if Column S (A.I. Short Alt Text) is empty
+# - Fills Columns S–V:
+#     S (19): A.I. Short Alt Text
+#     T (20): A.I. Med Alt Text
+#     U (21): A.I. Long Alt Text
+#     V (22): A.I. Notes
 # The output is a *copy* of the original .xlsx with "_AI" appended.
 # Can reuse since it SKIPS rows with AI alt text already filled.
+#
+# Key input columns read:
+#     D  (4):  Image URL
+#     G  (7):  Image Context
+#     I  (9):  Section/Module/Figure #
+#     J  (10): Webpage/Source
+#     P  (16): Original Alt Text
+#     S  (19): A.I. Short Alt Text  ← skip check (change to W col 23 to skip by Suggested Alt Text)
 
 import os
 import json
@@ -135,12 +143,12 @@ def main():
     if not col_a_dim.width or col_a_dim.width < desired_thumb_width:
         col_a_dim.width = desired_thumb_width
 
-    # Ensure headers P–S exist (row 1), but don't overwrite if already present
+    # Ensure headers S–V exist (row 1), but don't overwrite if already present
     header_map = {
-        16: "AI Short Alt Text",    # P
-        17: "AI Standard Alt Text", # Q
-        18: "AI Long Alt Text",     # R
-        19: "AI Notes",             # S
+        19: "A.I. Short Alt Text",  # S
+        20: "A.I. Med Alt Text",    # T
+        21: "A.I. Long Alt Text",   # U
+        22: "A.I. Notes",           # V
     }
     for col_idx, header in header_map.items():
         cell = ws.cell(row=1, column=col_idx)
@@ -149,25 +157,26 @@ def main():
 
     # Loop over rows 2..max_row
     for row_idx in range(2, ws.max_row + 1):
-        image_link_cell = ws.cell(row=row_idx, column=3)   # C: Image Link
-        
-        #Update below if changing column to review and skip AI
-        current_alt_cell = ws.cell(row=row_idx, column=20)  # N: Current Alt Text Change column = 14, # T: Suggested Alt Text column = 20
-        if current_alt_cell.value not in (None, ""):
+        image_link_cell = ws.cell(row=row_idx, column=4)   # D (4): Image URL  (old col 3 C: Image Link)
+
+        # Skip check: if S (A.I. Short Alt Text) already has a value, AI has already run — skip this row.
+        # To instead skip rows where W (New/Suggested Alt Text) is filled, change column=19 to column=23.
+        ai_check_cell = ws.cell(row=row_idx, column=19)    # S (19): A.I. Short Alt Text  (old col 20 T: Suggested Alt Text)
+        if ai_check_cell.value not in (None, ""):
             continue
 
         image_url = (image_link_cell.value or "").strip()
 
-        # Skip rows with no image link
+        # Skip rows with no image URL
         if not image_url:
             continue
 
-        # Pull some context from existing columns:
-        # G: Image Context, K: Section, N: Current Alt Text, J: Webpage/Source
-        image_context = (ws.cell(row=row_idx, column=7).value or "").strip()   # G
-        section = (ws.cell(row=row_idx, column=11).value or "").strip()        # K
-        current_alt = (ws.cell(row=row_idx, column=14).value or "").strip()    # N
-        webpage = (ws.cell(row=row_idx, column=10).value or "").strip()        # J
+        # Pull context from existing columns (master schema):
+        # G (7): Image Context, I (9): Section/Module/Figure #, P (16): Original Alt Text, J (10): Webpage/Source
+        image_context = (ws.cell(row=row_idx, column=7).value or "").strip()   # G (7): Image Context  (unchanged)
+        section = (ws.cell(row=row_idx, column=9).value or "").strip()         # I (9): Section/Module/Figure #  (old col 11 K: Section)
+        current_alt = (ws.cell(row=row_idx, column=16).value or "").strip()    # P (16): Original Alt Text  (old col 14 N: Current Alt Text)
+        webpage = (ws.cell(row=row_idx, column=10).value or "").strip()        # J (10): Webpage/Source  (unchanged)
 
         context_parts = [image_context, section, current_alt, webpage]
         context = " | ".join([c for c in context_parts if c])
@@ -208,14 +217,14 @@ def main():
         ai_long = utils.clean_text(ai_json.get("long", ""), 2000)
         ai_notes = utils.clean_text(ai_json.get("notes", ""), 1000)
 
-        # --- P–S: write AI text ---
-        ws.cell(row=row_idx, column=16, value=ai_short)    # P
-        ws.cell(row=row_idx, column=17, value=ai_standard) # Q
-        ws.cell(row=row_idx, column=18, value=ai_long)     # R
-        ws.cell(row=row_idx, column=19, value=ai_notes)    # S
+        # --- S–V (19–22): write AI text ---
+        ws.cell(row=row_idx, column=19, value=ai_short)    # S (19): A.I. Short Alt Text  (old col 16 P)
+        ws.cell(row=row_idx, column=20, value=ai_standard) # T (20): A.I. Med Alt Text    (old col 17 Q)
+        ws.cell(row=row_idx, column=21, value=ai_long)     # U (21): A.I. Long Alt Text   (old col 18 R)
+        ws.cell(row=row_idx, column=22, value=ai_notes)    # V (22): A.I. Notes           (old col 19 S)
 
         # Make the AI cells wrap & top-align
-        for col_idx in range(16, 20):
+        for col_idx in range(19, 23):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.alignment = Alignment(
                 wrap_text=True,
