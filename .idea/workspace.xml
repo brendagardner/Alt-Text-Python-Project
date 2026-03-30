@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2c9137eb-a861-45da-8a18-a25a409ef198" name="Changes" comment="Two improvements:&#10;Column K (Section/Module) now uses build_rid_figure_map() first to find Caption-style figure labels, with extract_section_from_heading() as a fallback — exactly matching WORD_to_AI.py's pattern. Previously it only used the heading fallback.&#10;EMF conversion now passes ZAMZAR_API_KEY to convert_vector_to_png_bytes(), with WMF files explicitly skipped with a printed message. ZAMZAR_API_KEY is set to None by default in the config — change it to os.getenv(&quot;ZAMZAR&quot;) if you want Zamzar-quality thumbnails in the audit output.">
+      <change beforePath="$PROJECT_DIR$/Audit_Website_AltText.py" beforeDir="false" afterPath="$PROJECT_DIR$/Audit_Website_AltText.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Audit_Word_Alt_Text.py" beforeDir="false" afterPath="$PROJECT_DIR$/Audit_Word_Alt_Text.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Image_URLs_to_AI.py" beforeDir="false" afterPath="$PROJECT_DIR$/Image_URLs_to_AI.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PDF_to_AI.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PushAltText_Excel_toWord.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PushAltText_Excel_to_MultipleWord.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Simple_AUDIT_Word_Alt_Text.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Simple_Report_Excel_to_Word_PushAltText.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/UploadImagesToPress.py" beforeDir="false" afterPath="$PROJECT_DIR$/UploadImagesToPress.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/WORD_to_AI.py" beforeDir="false" afterPath="$PROJECT_DIR$/WORD_to_AI.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Website_to_AI.py" beforeDir="false" afterPath="$PROJECT_DIR$/Website_to_AI.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alttext_utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/helpers/alttext_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/helpers/alttext_utils.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+        <map>
+          <entry type="REMOTE">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="origin/main" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="Edit-Column-Outputs" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;history&quot;: [
+    {
+      &quot;state&quot;: &quot;OPEN&quot;,
+      &quot;reviewState&quot;: &quot;AWAITING_REVIEW&quot;
+    }
+  ],
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;reviewState&quot;: &quot;AWAITING_REVIEW&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/brendagardner/Alt-Text-Python-Project.git&quot;,
+    &quot;accountId&quot;: &quot;1f349611-882d-4172-8bef-d945d43fc967&quot;
+  },
+  &quot;recentNewPullRequestHead&quot;: {
+    &quot;server&quot;: {
+      &quot;useHttp&quot;: false,
+      &quot;host&quot;: &quot;github.com&quot;,
+      &quot;port&quot;: null,
+      &quot;suffix&quot;: null
+    },
+    &quot;owner&quot;: &quot;brendagardner&quot;,
+    &quot;repository&quot;: &quot;Alt-Text-Python-Project&quot;
+  }
+}</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/WORD_to_AI.py" root0="SKIP_HIGHLIGHTING" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;customColor&quot;: &quot;4b4385f2&quot;,
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="361s3X9hUGeEPhFtH58mWZ194gx" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.AUDIT_Current_Alt Text_WORD_Folder.executor&quot;: &quot;Run&quot;,
+    &quot;Python.AUDIT_Current_Alt Text_WORD_Individual_File.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Audit_Website_AltText.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Audit_Word_Alt Text.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Audit_Word_Alt_Text.executor&quot;: &quot;Run&quot;,
+    &quot;Python.BuildAPIVisionKey.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Download_Website_Images.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Excel_to_Word_PushAltText.executor&quot;: &quot;Run&quot;,
+    &quot;Python.NEW_PushAltText_ExcelandAmend.executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDF_Images.executor&quot;: &quot;Run&quot;,
+    &quot;Python.PushAltText_Excel_toWord.executor&quot;: &quot;Run&quot;,
+    &quot;Python.PushAltText_Excel_to_MultipleWord.executor&quot;: &quot;Run&quot;,
+    &quot;Python.WEBSITE_Scrape_AltText.executor&quot;: &quot;Run&quot;,
+    &quot;Python.WORD_to_AI.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Website_to_AI.executor&quot;: &quot;Run&quot;,
+    &quot;Python.WordToPressbooks.executor&quot;: &quot;Run&quot;,
+    &quot;Python.count_word_images.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/brendagardner/Documents/GitHub/Alt-Text-Python-Project&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.intellij.pycharm.community.ide.impl.configuration.PythonContentEntriesConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
+    ]
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/helpers" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.BuildAPIVisionKey">
+    <configuration name="BuildAPIVisionKey" type="PythonConfigurationType" factoryName="Python">
+      <module name="Alt-Text-Python-Project" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="ZAMZAR" value="4bac3b841844545301c6644a868734bfa7b13b28" />
+        <env name="ABACUS_API_KEY" value="s2_ffc3f8609c414a6abad8d77332dc0bea" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/WORD_to_AI.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="PressbooksAPI" type="PythonConfigurationType" factoryName="Python">
+      <module name="Alt-Text-Python-Project" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+        <env name="PB_APP_PASSWORD" value="TUnW Ob0c KnOK g8Y7 dMOG ozYC" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.9" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../../Claude Test Files/UploadImagesToPress.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.BuildAPIVisionKey" />
+      <item itemvalue="Python.PressbooksAPI" />
+    </list>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-PY-252.25557.130" />
+        <option value="bundled-python-sdk-1bde30d8e611-7b97d883f26b-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.25557.130" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2c9137eb-a861-45da-8a18-a25a409ef198" name="Changes" comment="" />
+      <created>1764185213244</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1764185213244</updated>
+      <workItem from="1764185214649" duration="101188000" />
+      <workItem from="1765396065869" duration="1626000" />
+      <workItem from="1765398647536" duration="16000" />
+      <workItem from="1765398678994" duration="11017000" />
+      <workItem from="1765827957313" duration="3744000" />
+      <workItem from="1766353897173" duration="1630000" />
+      <workItem from="1770064349061" duration="11132000" />
+      <workItem from="1770412010851" duration="2098000" />
+      <workItem from="1770740589048" duration="475000" />
+      <workItem from="1770914833581" duration="12830000" />
+      <workItem from="1771025857723" duration="73080000" />
+      <workItem from="1772295601794" duration="12432000" />
+      <workItem from="1772730463785" duration="4929000" />
+      <workItem from="1773347603403" duration="51493000" />
+      <workItem from="1774455385454" duration="7319000" />
+      <workItem from="1774555164519" duration="5367000" />
+      <workItem from="1774638469110" duration="5710000" />
+    </task>
+    <task id="LOCAL-00001" summary="Created new helper files to reuse repeating scripts.">
+      <option name="closed" value="true" />
+      <created>1764200453617</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1764200453617</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Created new helper files to reuse repeating scripts.">
+      <option name="closed" value="true" />
+      <created>1764609038568</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1764609038568</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Created new helper files to reuse repeating scripts.">
+      <option name="closed" value="true" />
+      <created>1764611430133</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1764611430133</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Added website scraping script.">
+      <option name="closed" value="true" />
+      <created>1764622370068</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1764622370068</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Added website scraping script.">
+      <option name="closed" value="true" />
+      <created>1764626035172</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1764626035172</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Finished process of adding AI Topic and creating Excel_URLs_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1764636497056</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1764636497057</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Finished process of adding AI Topic and creating Excel_URLs_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1764790803917</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1764790803917</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Finished process of adding AI Topic and creating Excel_URLs_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1765392580165</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1765392580165</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Removed duplicate image processing in WORD_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1765395885151</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1765395885151</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Removed duplicate image processing in WORD_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1765395931955</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1765395931955</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Removed duplicate image processing in WORD_to_AI.py">
+      <option name="closed" value="true" />
+      <created>1765396106378</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1765396106378</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Updated Push Alt Text File back to Word">
+      <option name="closed" value="true" />
+      <created>1765412071984</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1765412071984</updated>
+    </task>
+    <task id="LOCAL-00013" summary="Updated files for efficiency.  Added Zamzar for excel image conversion for thumbnail to .png.">
+      <option name="closed" value="true" />
+      <created>1772480670620</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1772480670620</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Updated files for efficiency.  Added Zamzar for excel image conversion for thumbnail to .png.">
+      <option name="closed" value="true" />
+      <created>1772480696977</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1772480696977</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Added convert_emf_via_zamzar() as the single canonical EMF converter (no LibreOffice). Fixed the duplicate convert_svg_to_png_bytes and convert_emf_to_png_bytes_libreoffice functions that were defined twice. Updated convert_vector_to_png_bytes() to accept an optional zamzar_api_key parameter — pass the key and it uses Zamzar; omit it and it falls back to LibreOffice (with a clear warning).">
+      <option name="closed" value="true" />
+      <created>1772485358402</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1772485358402</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Added convert_emf_via_zamzar() as the single canonical EMF converter (no LibreOffice). Fixed the duplicate convert_svg_to_png_bytes and convert_emf_to_png_bytes_libreoffice functions that were defined twice. Updated convert_vector_to_png_bytes() to accept an optional zamzar_api_key Removed the 100-line inline convert_emf_via_zamzar() function. Now calls utils.convert_emf_via_zamzar() with PNG saving handled separately. Also removed the now-redundant ZAMZAR_BASE_URL/ZAMZAR_JOBS_URL constants.">
+      <option name="closed" value="true" />
+      <created>1772485386347</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1772485386347</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Removed identical inline LibreOffice functions from both. Replaced LIBREOFFICE_PATH config with ZAMZAR_API_KEY = os.getenv(&quot;ZAMZAR&quot;). Updated calls to route through utils.convert_vector_to_png_bytes().">
+      <option name="closed" value="true" />
+      <created>1772485412391</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1772485412391</updated>
+    </task>
+    <task id="LOCAL-00018" summary="will upload every image to your media library with alt text already set, then rewrite the HTML file so all &lt;img&gt; tags have live Pressbooks URLs ready to paste.">
+      <option name="closed" value="true" />
+      <created>1772485451659</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1772485451659</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Two improvements:&#10;Column K (Section/Module) now uses build_rid_figure_map() first to find Caption-style figure labels, with extract_section_from_heading() as a fallback — exactly matching WORD_to_AI.py's pattern. Previously it only used the heading fallback.&#10;EMF conversion now passes ZAMZAR_API_KEY to convert_vector_to_png_bytes(), with WMF files explicitly skipped with a printed message. ZAMZAR_API_KEY is set to None by default in the config — change it to os.getenv(&quot;ZAMZAR&quot;) if you want Zamzar-quality thumbnails in the audit output.">
+      <option name="closed" value="true" />
+      <created>1772487951933</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1772487951933</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Created new helper files to reuse repeating scripts." />
+    <MESSAGE value="Added website scraping script." />
+    <MESSAGE value="Finished process of adding AI Topic and creating Excel_URLs_to_AI.py" />
+    <MESSAGE value="Removed duplicate image processing in WORD_to_AI.py" />
+    <MESSAGE value="Updated Push Alt Text File back to Word" />
+    <MESSAGE value="Updated files for efficiency.  Added Zamzar for excel image conversion for thumbnail to .png." />
+    <MESSAGE value="Added convert_emf_via_zamzar() as the single canonical EMF converter (no LibreOffice). Fixed the duplicate convert_svg_to_png_bytes and convert_emf_to_png_bytes_libreoffice functions that were defined twice. Updated convert_vector_to_png_bytes() to accept an optional zamzar_api_key parameter — pass the key and it uses Zamzar; omit it and it falls back to LibreOffice (with a clear warning)." />
+    <MESSAGE value="Added convert_emf_via_zamzar() as the single canonical EMF converter (no LibreOffice). Fixed the duplicate convert_svg_to_png_bytes and convert_emf_to_png_bytes_libreoffice functions that were defined twice. Updated convert_vector_to_png_bytes() to accept an optional zamzar_api_key Removed the 100-line inline convert_emf_via_zamzar() function. Now calls utils.convert_emf_via_zamzar() with PNG saving handled separately. Also removed the now-redundant ZAMZAR_BASE_URL/ZAMZAR_JOBS_URL constants." />
+    <MESSAGE value="Removed identical inline LibreOffice functions from both. Replaced LIBREOFFICE_PATH config with ZAMZAR_API_KEY = os.getenv(&quot;ZAMZAR&quot;). Updated calls to route through utils.convert_vector_to_png_bytes()." />
+    <MESSAGE value="will upload every image to your media library with alt text already set, then rewrite the HTML file so all &lt;img&gt; tags have live Pressbooks URLs ready to paste." />
+    <MESSAGE value="Two improvements:&#10;Column K (Section/Module) now uses build_rid_figure_map() first to find Caption-style figure labels, with extract_section_from_heading() as a fallback — exactly matching WORD_to_AI.py's pattern. Previously it only used the heading fallback.&#10;EMF conversion now passes ZAMZAR_API_KEY to convert_vector_to_png_bytes(), with WMF files explicitly skipped with a printed message. ZAMZAR_API_KEY is set to None by default in the config — change it to os.getenv(&quot;ZAMZAR&quot;) if you want Zamzar-quality thumbnails in the audit output." />
+    <option name="LAST_COMMIT_MESSAGE" value="Two improvements:&#10;Column K (Section/Module) now uses build_rid_figure_map() first to find Caption-style figure labels, with extract_section_from_heading() as a fallback — exactly matching WORD_to_AI.py's pattern. Previously it only used the heading fallback.&#10;EMF conversion now passes ZAMZAR_API_KEY to convert_vector_to_png_bytes(), with WMF files explicitly skipped with a printed message. ZAMZAR_API_KEY is set to None by default in the config — change it to os.getenv(&quot;ZAMZAR&quot;) if you want Zamzar-quality thumbnails in the audit output." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/NEW_PushAltText_ExcelandAmend.py</url>
+          <line>29</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$PushAltText_Excel_toWord.coverage" NAME="PushAltText_Excel_toWord Coverage Results" MODIFIED="1772749683396" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$Audit_Word_Alt_Text.coverage" NAME="Audit_Word_Alt_Text Coverage Results" MODIFIED="1774641080911" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$Website_to_AI.coverage" NAME="Website_to_AI Coverage Results" MODIFIED="1764634337412" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$AUDIT_Current_Alt_Text_WORD_Folder.coverage" NAME="AUDIT_Current_Alt Text_WORD_Folder Coverage Results" MODIFIED="1764611298934" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$count_word_images.coverage" NAME="count_word_images Coverage Results" MODIFIED="1771361955223" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Desktop" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$WORD_to_AI.coverage" NAME="WORD_to_AI Coverage Results" MODIFIED="1771363091132" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$WordToPressbooks.coverage" NAME="WordToPressbooks Coverage Results" MODIFIED="1773931701783" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$Download_Website_Images.coverage" NAME="Download_Website_Images Coverage Results" MODIFIED="1772486170790" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$Excel_to_Word_PushAltText.coverage" NAME="Excel_to_Word_PushAltText Coverage Results" MODIFIED="1765400585094" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$WEBSITE_Scrape_AltText.coverage" NAME="WEBSITE_Scrape_AltText Coverage Results" MODIFIED="1764621890591" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$Audit_Website_AltText.coverage" NAME="Audit_Website_AltText Coverage Results" MODIFIED="1773347645140" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$PushAltText_Excel_to_MultipleWord.coverage" NAME="PushAltText_Excel_to_MultipleWord Coverage Results" MODIFIED="1774394919592" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$NEW_PushAltText_ExcelandAmend.coverage" NAME="NEW_PushAltText_ExcelandAmend Coverage Results" MODIFIED="1774638704065" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$AUDIT_Current_Alt_Text_WORD_Individual_File.coverage" NAME="AUDIT_Current_Alt Text_WORD_Individual_File Coverage Results" MODIFIED="1764189201297" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$PDF_Images.coverage" NAME="PDF_Images Coverage Results" MODIFIED="1771278208354" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/Alt_Text_Python_Project$BuildAPIVisionKey.coverage" NAME="BuildAPIVisionKey Coverage Results" MODIFIED="1774555578181" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+  </component>
+</project>
